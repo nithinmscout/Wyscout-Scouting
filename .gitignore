@@ -1,0 +1,57 @@
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+
+# Streamlit cache
+.streamlit/
+
+# Sensitive folders
+Databases/
+databases/
+data/
+Data/
+raw_data/
+RawData/
+
+# Wyscout folders with CSVs
+Wyscout/
+wyscout/
+**/Wyscout/
+**/wyscout/
+
+# Large CSV and Excel files
+*.csv
+*.xlsx
+*.xls
+*.parquet
+
+# Reports and PDFs
+*.pdf
+*.docx
+*.pptx
+
+# Temporary files
+*.tmp
+*.temp
+*.log
+
+# Mac system files
+.DS_Store
+
+# VS Code settings
+.vscode/
+
+# Node folders (in case you add JS tools)
+node_modules/
+
+# Exclude your local experimental scripts
+scratch/
+notebooks/
