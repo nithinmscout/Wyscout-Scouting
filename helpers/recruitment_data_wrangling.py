@@ -60,6 +60,16 @@ def _strip_accents(text: str) -> str:
 
 WYSROOTDIR = os.environ.get("WYSROOTDIR") or os.environ.get("SCOUTING_APP_ROOT") or str(Path(__file__).resolve().parent.parent)
 
+THREE_NATION_FILTER = {
+    "belgium",
+    "belgian",
+    "dutch",
+    "netherlands",
+    "holland",
+    "france",
+    "french",
+}
+
 # Path to your Reference squad stats for this season
 REFERENCE_PLAYERS_PATH = Path(os.environ.get("SCOUTING_APP_ROOT", Path(__file__).resolve().parent.parent)) / "Reference_players_25_26.csv"
 
@@ -2185,8 +2195,9 @@ def _restrict_to_three_nations(df: pd.DataFrame) -> pd.DataFrame:
     if "__nation" not in df.columns:
         return df
 
-    mask = df["__nation"].astype(str).isin(THREE_NATION_FILTER)
-    return df[mask].copy()
+    nation_key = df["__nation"].astype(str).str.strip().str.casefold()
+    mask = nation_key.isin(THREE_NATION_FILTER).fillna(False).astype(bool)
+    return df.loc[mask].copy()
 
 def _find_metric_col(df: pd.DataFrame, candidates: list[str]) -> str | None:
     """

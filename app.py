@@ -690,6 +690,31 @@ def split_roles(cell: str) -> List[str]:
     if not cell: return []
     return [x.strip() for x in cell.split(",") if x.strip()]
 
+def _safe_bool_mask(mask, index) -> pd.Series:
+    """Return a real boolean Series, even when pandas/pyarrow returns nullable or string masks."""
+    try:
+        if isinstance(mask, pd.Series):
+            s = mask.reindex(index)
+        else:
+            s = pd.Series(mask, index=index)
+    except Exception:
+        return pd.Series(False, index=index, dtype=bool)
+
+    def _as_bool(value) -> bool:
+        if value is True:
+            return True
+        if value is False or value is None:
+            return False
+        try:
+            if pd.isna(value):
+                return False
+        except Exception:
+            pass
+        text = str(value).strip().casefold()
+        return text in {"true", "1", "yes", "y"}
+
+    return s.map(_as_bool).fillna(False).astype(bool)
+
 def get_primary_role(row: pd.Series) -> str:
     roles = split_roles(str(row.get("Position","")))
     return roles[0] if roles else ""
@@ -2777,7 +2802,10 @@ if nav == "Overview":
         role_rows = []
         for role in ROLE_ORDER:
             if "Position" in df.columns:
-                mask_role = df["Position"].astype(str).apply(lambda x: role.lower() in [r.lower() for r in split_roles(x)])
+                mask_role = _safe_bool_mask(
+                    df["Position"].astype(str).apply(lambda x: role.lower() in [r.lower() for r in split_roles(x)]),
+                    df.index,
+                )
                 count = int(mask_role.sum())
             else:
                 count = 0
@@ -2951,7 +2979,7 @@ if nav == "Shortlist Board":
                     return True
             return False
 
-        return data["Position"].astype(str).map(_matches)
+        return _safe_bool_mask(data["Position"].astype(str).map(_matches), data.index)
 
     def _safe_text(v) -> str:
         if v is None:
@@ -2971,8 +2999,8 @@ if nav == "Shortlist Board":
         return hit.iloc[0] if not hit.empty else pd.Series(dtype=object)
 
     def _defaults_for_role(role_code: str) -> list[str]:
-        mask_role = _role_mask(df_all, role_code)
-        mask_status = df_all["Shortlist Status"].astype(str).str.strip() != ""
+        mask_role = _safe_bool_mask(_role_mask(df_all, role_code), df_all.index)
+        mask_status = _safe_bool_mask(df_all["Shortlist Status"].astype(str).str.strip() != "", df_all.index)
         out = df_all.loc[mask_role & mask_status].copy()
         if out.empty:
             return []
@@ -2983,7 +3011,7 @@ if nav == "Shortlist Board":
         return out["Name"].dropna().astype(str).drop_duplicates().tolist()
 
     def _options_for_role(role_code: str, pool: pd.DataFrame, saved: list[str]) -> list[str]:
-        mask_role = _role_mask(pool, role_code)
+        mask_role = _safe_bool_mask(_role_mask(pool, role_code), pool.index)
         opts = pool.loc[mask_role, "Name"].dropna().astype(str).drop_duplicates().tolist()
         for name in saved:
             if name and name not in opts and (df_all["Name"].astype(str) == str(name)).any():
