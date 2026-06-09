@@ -625,17 +625,31 @@ def _ws_pos_tokens(pos_value) -> set[str]:
 # Preset dropdown labels are Role profile names, not Wyscout position strings.
 # Map them explicitly to the internal profile keys used by ROLES and RESPONSIBILITIES.
 _ROLE_PRESET_LABEL_TO_PROFILE_KEY: dict[str, str | None] = {
+    "GK": "GK",
+
     "6": "6",
+    "DMF": "6",
+    "LDMF/RDMF": "6",
+
     "8": "8",
+    "CMF": "8",
+    "LCMF/RCMF": "8",
+
     "10": "10",
+    "AMF": "10",
+    "LAMF/RAMF": "10",
+    "SS": "10",
 
     "CBS": "CB",
     "CBs": "CB",
     "CB": "CB",
+    "LCB/RCB": "CB",
 
     "FB/WB": "FB",
     "FBWB": "FB",
     "FB / WB": "FB",
+    "LB/RB": "FB",
+    "LWB/RWB": "FB",
 
     "7 - RM": "WM",
     "7-RM": "WM",
@@ -647,9 +661,13 @@ _ROLE_PRESET_LABEL_TO_PROFILE_KEY: dict[str, str | None] = {
     "7/11": "WM",
     "7": "WM",
     "11": "WM",
-
+    "LM/RM": "WM",
     "WM": "WM",
+
     "WF": "WF",
+    "LW/RW": "WF",
+    "LWF/RWF": "WF",
+    "LW/RW/LWF/RWF": "WF",
     "7A / 11A": "WF",
     "7A/11A": "WF",
     "7A /11A": "WF",
@@ -658,14 +676,14 @@ _ROLE_PRESET_LABEL_TO_PROFILE_KEY: dict[str, str | None] = {
     "9 - AF": "CF",
     "9-AF": "CF",
     "9 AF": "CF",
+    "CF": "CF",
+    "ST": "CF",
+    "CF/ST": "CF",
 
-    # If you later create RESPONSIBILITIES["TM"], change this to "TM"
     "9 - TM": "CF",
     "9-TM": "CF",
     "9 TM": "CF",
 
-    # Do not force this into CF when unclear.
-    # If "T1" is intended to mean GK in your preset sheet, set it to "GK".
     "T1": None,
 }
 

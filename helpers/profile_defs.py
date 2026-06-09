@@ -32,6 +32,256 @@ except Exception:
 
 
 
+ROLE_PRESET_COLUMNS = ["Profile", "KPIs", "Positions", "Notes"]
+
+
+def _join_preset_values(values: list[str]) -> str:
+    return " | ".join([str(v).strip() for v in values if str(v).strip()])
+
+
+DEFAULT_ROLE_PRESETS = [
+    {
+        "Profile": "GK",
+        "Positions": _join_preset_values(["GK"]),
+        "KPIs": _join_preset_values([
+            "Save rate, %",
+            "Prevented goals per 90",
+            "Exits per 90",
+            "Aerial duels per 90",
+            "Aerial duels won, %",
+            "Passes per 90",
+            "Accurate passes, %",
+            "Long passes per 90",
+            "Accurate long passes, %",
+        ]),
+        "Notes": "General goalkeeper screen using Wyscout position GK.",
+    },
+    {
+        "Profile": "CB",
+        "Positions": _join_preset_values(["CB", "LCB", "RCB"]),
+        "KPIs": _join_preset_values([
+            "Successful defensive actions per 90",
+            "Defensive duels per 90",
+            "Defensive duels won, %",
+            "Aerial duels per 90",
+            "Aerial duels won, %",
+            "Interceptions per 90",
+            "PAdj Interceptions",
+            "Shots blocked per 90",
+            "Fouls per 90",
+            "Passes per 90",
+            "Accurate passes, %",
+            "Progressive passes per 90",
+            "Passes to final third per 90",
+        ]),
+        "Notes": "General centre back screen using Wyscout positions CB, LCB and RCB.",
+    },
+    {
+        "Profile": "LB/RB",
+        "Positions": _join_preset_values(["LB", "RB"]),
+        "KPIs": _join_preset_values([
+            "Successful defensive actions per 90",
+            "Defensive duels per 90",
+            "Defensive duels won, %",
+            "Interceptions per 90",
+            "Progressive runs per 90",
+            "Progressive passes per 90",
+            "Passes to final third per 90",
+            "Passes to penalty area per 90",
+            "Crosses per 90",
+            "Accurate crosses, %",
+            "Dribbles per 90",
+            "Successful dribbles, %",
+        ]),
+        "Notes": "General full back screen using Wyscout positions LB and RB.",
+    },
+    {
+        "Profile": "LWB/RWB",
+        "Positions": _join_preset_values(["LWB", "RWB"]),
+        "KPIs": _join_preset_values([
+            "Successful defensive actions per 90",
+            "Defensive duels per 90",
+            "Defensive duels won, %",
+            "Progressive runs per 90",
+            "Accelerations per 90",
+            "Crosses per 90",
+            "Accurate crosses, %",
+            "Deep completed crosses per 90",
+            "Passes to penalty area per 90",
+            "Touches in box per 90",
+            "xA per 90",
+            "Dribbles per 90",
+        ]),
+        "Notes": "General wing back screen using Wyscout positions LWB and RWB.",
+    },
+    {
+        "Profile": "DMF",
+        "Positions": _join_preset_values(["DMF", "LDMF", "RDMF"]),
+        "KPIs": _join_preset_values([
+            "Successful defensive actions per 90",
+            "Defensive duels per 90",
+            "Defensive duels won, %",
+            "Interceptions per 90",
+            "PAdj Interceptions",
+            "Fouls per 90",
+            "Passes per 90",
+            "Accurate passes, %",
+            "Forward passes per 90",
+            "Accurate forward passes, %",
+            "Progressive passes per 90",
+            "Passes to final third per 90",
+        ]),
+        "Notes": "General defensive midfielder screen using Wyscout positions DMF, LDMF and RDMF.",
+    },
+    {
+        "Profile": "CMF",
+        "Positions": _join_preset_values(["CMF", "LCMF", "RCMF"]),
+        "KPIs": _join_preset_values([
+            "Successful attacking actions per 90",
+            "Successful defensive actions per 90",
+            "Duels per 90",
+            "Duels won, %",
+            "Progressive runs per 90",
+            "Progressive passes per 90",
+            "Passes to final third per 90",
+            "Passes to penalty area per 90",
+            "xA per 90",
+            "Key passes per 90",
+            "Shots per 90",
+            "Touches in box per 90",
+        ]),
+        "Notes": "General central midfielder screen using Wyscout positions CMF, LCMF and RCMF.",
+    },
+    {
+        "Profile": "AMF",
+        "Positions": _join_preset_values(["AMF", "LAMF", "RAMF"]),
+        "KPIs": _join_preset_values([
+            "xA per 90",
+            "Key passes per 90",
+            "Shot assists per 90",
+            "Smart passes per 90",
+            "Passes to penalty area per 90",
+            "Through passes per 90",
+            "Dribbles per 90",
+            "Successful dribbles, %",
+            "xG per 90",
+            "Shots per 90",
+            "Touches in box per 90",
+            "Successful defensive actions per 90",
+        ]),
+        "Notes": "General attacking midfielder screen using Wyscout positions AMF, LAMF and RAMF.",
+    },
+    {
+        "Profile": "LM/RM",
+        "Positions": _join_preset_values(["LM", "RM"]),
+        "KPIs": _join_preset_values([
+            "Successful attacking actions per 90",
+            "xA per 90",
+            "Key passes per 90",
+            "Shot assists per 90",
+            "Crosses per 90",
+            "Accurate crosses, %",
+            "Progressive runs per 90",
+            "Dribbles per 90",
+            "Successful dribbles, %",
+            "Defensive duels per 90",
+            "Defensive duels won, %",
+            "Successful defensive actions per 90",
+        ]),
+        "Notes": "General wide midfielder screen using Wyscout positions LM and RM.",
+    },
+    {
+        "Profile": "LW/RW/LWF/RWF",
+        "Positions": _join_preset_values(["LW", "RW", "LWF", "RWF"]),
+        "KPIs": _join_preset_values([
+            "Successful attacking actions per 90",
+            "Goals per 90",
+            "Non-penalty goals per 90",
+            "xG per 90",
+            "Shots per 90",
+            "Shots on target, %",
+            "Touches in box per 90",
+            "xA per 90",
+            "Key passes per 90",
+            "Dribbles per 90",
+            "Successful dribbles, %",
+            "Progressive runs per 90",
+        ]),
+        "Notes": "General wide attacker screen using Wyscout positions LW, RW, LWF and RWF.",
+    },
+    {
+        "Profile": "CF/ST",
+        "Positions": _join_preset_values(["CF", "ST"]),
+        "KPIs": _join_preset_values([
+            "Goals per 90",
+            "Non-penalty goals per 90",
+            "xG per 90",
+            "Shots per 90",
+            "Shots on target, %",
+            "Touches in box per 90",
+            "Head goals per 90",
+            "Aerial duels per 90",
+            "Aerial duels won, %",
+            "Offensive duels per 90",
+            "Offensive duels won, %",
+            "xA per 90",
+            "Shot assists per 90",
+        ]),
+        "Notes": "General centre forward screen using Wyscout positions CF and ST.",
+    },
+    {
+        "Profile": "SS",
+        "Positions": _join_preset_values(["SS"]),
+        "KPIs": _join_preset_values([
+            "Successful attacking actions per 90",
+            "Goals per 90",
+            "Non-penalty goals per 90",
+            "xG per 90",
+            "Shots per 90",
+            "Touches in box per 90",
+            "xA per 90",
+            "Key passes per 90",
+            "Shot assists per 90",
+            "Smart passes per 90",
+            "Dribbles per 90",
+            "Progressive runs per 90",
+        ]),
+        "Notes": "General second striker screen using Wyscout position SS.",
+    },
+]
+
+
+ROLE_PRESET_PROFILE_KEY_MAP = {
+    "GK": "GK",
+    "CB": "CB",
+    "LCB/RCB": "CB",
+    "LB/RB": "FB",
+    "LWB/RWB": "FB",
+    "DMF": "6",
+    "LDMF/RDMF": "6",
+    "CMF": "8",
+    "LCMF/RCMF": "8",
+    "AMF": "10",
+    "LAMF/RAMF": "10",
+    "LM/RM": "WM",
+    "LW/RW": "WF",
+    "LWF/RWF": "WF",
+    "LW/RW/LWF/RWF": "WF",
+    "CF": "CF",
+    "ST": "CF",
+    "CF/ST": "CF",
+    "SS": "10",
+}
+
+
+def default_role_presets_frame() -> pd.DataFrame:
+    rows = []
+    for row in DEFAULT_ROLE_PRESETS:
+        clean = {col: str(row.get(col, "") or "").strip() for col in ROLE_PRESET_COLUMNS}
+        rows.append(clean)
+    return pd.DataFrame(rows, columns=ROLE_PRESET_COLUMNS)
+
+
 ####################################################################################
 # POSITION ROLES DEFINITIONS AND METRICS
 # (metric_col, threshold_percentile, higher_is_better, weight)
@@ -1224,10 +1474,13 @@ def _metric_percentile(cohort_df, metric_col: str, player_val, higher_is_better:
 # FUNCTION TO COMPUTE RESPONSIBILITY SCORES FOR A PLAYER WITHIN A COHORT
 #-----------------------------------------------------------------------
 def _compute_responsibility_scores(cohort_df: pd.DataFrame, player_row: pd.Series, profile_key: str):
-    spec = RESPONSIBILITIES.get(profile_key)
+    spec = RESPONSIBILITIES.get(profile_key) or {}
 
     out = {}
     breakdown = {}
+
+    if not spec:
+        return out, breakdown
 
     for resp_name, metric_list in spec.items():
         pct_vals = []

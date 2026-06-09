@@ -5486,8 +5486,8 @@ def render_data_analysis_page(
                     dfp = _load_presets()
                     row = {
                         "Profile": new_name.strip(),
-                        "KPIs": ", ".join(new_kpis),
-                        "Positions": ", ".join(new_positions),
+                        "KPIs": " | ".join(new_kpis),
+                        "Positions": " | ".join(new_positions),
                         "Notes": new_notes,
                     }
                     mask = dfp["Profile"].astype(str).str.lower() == new_name.strip().lower()

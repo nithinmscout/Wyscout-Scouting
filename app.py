@@ -67,6 +67,7 @@ import json
 
 from helpers import recruitment_data_analysis as recruitment_da
 from helpers.player_reports_page import render_player_reports_page
+from helpers.profile_defs import ROLE_PRESET_COLUMNS, default_role_presets_frame
 from pathlib import Path
 
 def resolve_app_root() -> Path:
@@ -2483,28 +2484,84 @@ from pathlib import Path
 PRESET_PATH = Path("Scouting Workspace/Player Profiling/Role_Profile_KPIs.csv")
 PRESET_PATH.parent.mkdir(parents=True, exist_ok=True)
 
+def _normalise_preset_frame(df: pd.DataFrame | None) -> pd.DataFrame:
+    cols = list(ROLE_PRESET_COLUMNS)
+    if df is None or df.empty:
+        return pd.DataFrame(columns=cols)
+    out = df.copy()
+    for c in cols:
+        if c not in out.columns:
+            out[c] = ""
+    return out[cols].fillna("").astype(str)
+
+def _merge_default_role_presets(df: pd.DataFrame | None) -> tuple[pd.DataFrame, bool]:
+    base = _normalise_preset_frame(df)
+    defaults = _normalise_preset_frame(default_role_presets_frame())
+
+    if defaults.empty:
+        return base, False
+
+    existing = {
+        str(v).strip().casefold()
+        for v in base.get("Profile", pd.Series(dtype=str)).dropna().astype(str)
+        if str(v).strip()
+    }
+
+    missing = defaults[
+        ~defaults["Profile"].astype(str).str.strip().str.casefold().isin(existing)
+    ]
+
+    if missing.empty:
+        return base, False
+
+    merged = pd.concat([base, missing], ignore_index=True)
+    merged = _normalise_preset_frame(merged)
+    return merged, True
+
 def _load_presets() -> pd.DataFrame:
+    df = pd.DataFrame(columns=list(ROLE_PRESET_COLUMNS))
+
     if PRESET_PATH.exists():
         try:
-            return pd.read_csv(PRESET_PATH, dtype=str).fillna("")
+            df = pd.read_csv(PRESET_PATH, dtype=str).fillna("")
         except Exception:
-            st.warning("Failed to read KPI presets CSV. Recreating a fresh one.")
-    df = pd.DataFrame(columns=["Profile","KPIs","Positions","Notes"])
-    df.to_csv(PRESET_PATH, index=False, encoding="utf-8-sig")
+            st.warning("Failed to read KPI presets CSV. Recreating it with the default role presets.")
+
+    df, changed = _merge_default_role_presets(df)
+
+    if changed or not PRESET_PATH.exists():
+        df.to_csv(PRESET_PATH, index=False, encoding="utf-8-sig")
+
     return df
 
 def _save_presets(df: pd.DataFrame):
-    cols = ["Profile","KPIs","Positions","Notes"]
-    for c in cols:
-        if c not in df.columns:
-            df[c] = ""
-    df = df[cols].fillna("")
+    df, _ = _merge_default_role_presets(df)
     df.to_csv(PRESET_PATH, index=False, encoding="utf-8-sig")
 
 def _parse_list(cell: str) -> list[str]:
-    if not cell:
+    if cell is None:
         return []
-    return [c.strip() for c in str(cell).split(",") if c.strip()]
+
+    text = str(cell).strip()
+    if not text:
+        return []
+
+    if text.startswith("[") and text.endswith("]"):
+        try:
+            parsed = json.loads(text)
+            if isinstance(parsed, list):
+                return [str(c).strip() for c in parsed if str(c).strip()]
+        except Exception:
+            pass
+
+    if "|" in text:
+        parts = text.split("|")
+    elif ";" in text:
+        parts = text.split(";")
+    else:
+        parts = text.split(",")
+
+    return [c.strip() for c in parts if c.strip()]
 
 def _sanitize_defaults(defaults: list[str] | None, options: list[str]) -> tuple[list[str], list[str]]:
     defaults = defaults or []
