@@ -415,6 +415,9 @@ def render_moneyball_block(
         st.info("No data available for Moneyball.")
         return
 
+    if title:
+        st.markdown(f"### {title}")
+
     name_col = _mb_pick_col(df, ["Player", "Player name", "Name", "player_name"])
     team_col = _mb_pick_col(df, ["Team", "Squad", "Club"])
     league_col = _mb_pick_col(df, ["League", "Competition", "Division"])
@@ -477,13 +480,24 @@ def render_moneyball_block(
     perf, used_kpis = _mb_build_perf_score(work, kpi_cols=kpi_cols, metric_direction=metric_direction)
     work["_perf_z"] = perf
 
-    log_mv = pd.Series(np.log(pd.to_numeric(work["_mv_eur"], errors="coerce").values), index=work.index)
-    yhat = _mb_fit_expected_value(log_mv=log_mv, perf=work["_perf_z"], age=work[age_col] if age_col else None)
-    work["_exp_log_mv"] = yhat
-    work["_exp_mv_eur"] = pd.Series(
-    np.exp(pd.to_numeric(work["_exp_log_mv"], errors="coerce").values),
-    index=work.index
-    )
+    value_model = globals().get("_mb_apply_professional_value_model")
+    if callable(value_model):
+        work, valuation_info = value_model(work, perf_col="_perf_z")
+    else:
+        log_mv = pd.Series(np.log(pd.to_numeric(work["_mv_eur"], errors="coerce").values), index=work.index)
+        yhat = _mb_fit_expected_value(log_mv=log_mv, perf=work["_perf_z"], age=work[age_col] if age_col else None)
+        work["_fair_log_mv"] = yhat
+        work["_fair_mv_eur"] = pd.Series(
+            np.exp(pd.to_numeric(work["_fair_log_mv"], errors="coerce").values),
+            index=work.index,
+        )
+        work["_fair_low_eur"] = work["_fair_mv_eur"] * 0.70
+        work["_fair_high_eur"] = work["_fair_mv_eur"] * 1.30
+        work["_valuation_confidence"] = "Medium"
+        valuation_info = {"status": "legacy", "rows_used": len(work), "features_used": []}
+
+    work["_exp_log_mv"] = pd.to_numeric(work.get("_fair_log_mv"), errors="coerce")
+    work["_exp_mv_eur"] = pd.to_numeric(work.get("_fair_mv_eur"), errors="coerce")
     # -------------------------------------------------------------------------
     # Render outputs (tables + optional radar)
     # -------------------------------------------------------------------------
@@ -517,16 +531,35 @@ def render_moneyball_block(
     except Exception:
         df_sig = "na"
 
-    st.caption(f"Moneyball cohort signature: {df_sig} | rows: {len(work)} | KPIs used: {len(used_kpis)}")
+    model_status = valuation_info.get("status", "unknown") if isinstance(valuation_info, dict) else "unknown"
+    rows_used = valuation_info.get("rows_used", 0) if isinstance(valuation_info, dict) else 0
+    features_used = valuation_info.get("features_used", []) if isinstance(valuation_info, dict) else []
+    model_weight = valuation_info.get("model_weight", 0.0) if isinstance(valuation_info, dict) else 0.0
+
+    st.caption(
+        f"Moneyball cohort signature: {df_sig} | rows: {len(work)} | KPIs used: {len(used_kpis)} | "
+        f"valuation model: {model_status} | training rows: {rows_used} | model weight: {model_weight:.2f}"
+    )
+
+    with st.expander("Valuation model notes", expanded=False):
+        st.markdown(
+            "The fair value estimate uses a robust log market value model. "
+            "It blends performance, age curve, minutes reliability, contract length, position group and league strength where those fields exist. "
+            "Low sample players are pulled back towards their positional market baseline."
+        )
+        if features_used:
+            st.write("Features used:")
+            st.write(features_used)
 
     # Sort controls
     sort_mode = st.selectbox(
         "Sort by",
         options=[
-            "Most undervalued (Expected minus Actual)",
-            "Most overvalued (Actual minus Expected)",
+            "Best value opportunity",
+            "Most overvalued by model",
             "Best performance score",
             "Lowest market value",
+            "Highest confidence opportunity",
         ],
         index=0,
         key=f"{key_prefix}_mb_sort",
@@ -543,12 +576,14 @@ def render_moneyball_block(
 
     work2 = work.copy()
 
-    if sort_mode == "Most undervalued (Expected minus Actual)":
-        work2 = work2.sort_values("_value_gap_eur", ascending=False)
-    elif sort_mode == "Most overvalued (Actual minus Expected)":
+    if sort_mode == "Best value opportunity":
+        work2 = work2.sort_values(["_value_gap_eur", "_valuation_confidence_score", "_perf_z"], ascending=[False, False, False])
+    elif sort_mode == "Most overvalued by model":
         work2 = work2.sort_values("_value_gap_eur", ascending=True)
     elif sort_mode == "Best performance score":
         work2 = work2.sort_values("_perf_z", ascending=False)
+    elif sort_mode == "Highest confidence opportunity":
+        work2 = work2.sort_values(["_valuation_confidence_score", "_value_gap_eur", "_perf_z"], ascending=[False, False, False])
     else:
         work2 = work2.sort_values("_mv_eur", ascending=True)
 
@@ -567,19 +602,46 @@ def render_moneyball_block(
     if mins_col and mins_col in work2.columns:
         display_cols.append(mins_col)
 
-    display_cols += ["_mv_eur", "_exp_mv_eur", "_value_gap_eur", "_value_gap_pct", "_perf_z", "_contract_months"]
+    display_cols += [
+        "_mv_eur",
+        "_exp_mv_eur",
+        "_fair_low_eur",
+        "_fair_high_eur",
+        "_value_gap_eur",
+        "_value_gap_pct",
+        "_perf_z",
+        "_contract_months",
+        "_valuation_confidence",
+    ]
 
     disp = work2.loc[:, [c for c in display_cols if c in work2.columns]].head(int(top_n)).copy()
 
     rename_map = {
         "_mv_eur": "Actual MV (EUR)",
-        "_exp_mv_eur": "Expected MV (EUR)",
-        "_value_gap_eur": "Value gap (EUR)",
-        "_value_gap_pct": "Value gap (%)",
-        "_perf_z": "Perf score (z)",
+        "_exp_mv_eur": "Model fair value (EUR)",
+        "_fair_low_eur": "Fair value low (EUR)",
+        "_fair_high_eur": "Fair value high (EUR)",
+        "_value_gap_eur": "Opportunity gap (EUR)",
+        "_value_gap_pct": "Opportunity gap (%)",
+        "_perf_z": "Performance score",
         "_contract_months": "Contract months",
+        "_valuation_confidence": "Model confidence",
     }
     disp = disp.rename(columns=rename_map)
+
+    currency_cols = [
+        "Actual MV (EUR)",
+        "Model fair value (EUR)",
+        "Fair value low (EUR)",
+        "Fair value high (EUR)",
+        "Opportunity gap (EUR)",
+    ]
+    for c in currency_cols:
+        if c in disp.columns:
+            disp[c] = pd.to_numeric(disp[c], errors="coerce").round(0).astype("Int64")
+    for c in ["Opportunity gap (%)", "Performance score", "Contract months"]:
+        if c in disp.columns:
+            disp[c] = pd.to_numeric(disp[c], errors="coerce").round(2)
 
     st.dataframe(disp, use_container_width=True, hide_index=True)
 
@@ -627,10 +689,18 @@ def render_moneyball_block(
             mv0 = float(pd.to_numeric(tr0.get("_mv_eur"), errors="coerce"))
             exp0 = float(pd.to_numeric(tr0.get("_exp_mv_eur"), errors="coerce"))
             gap0 = float(pd.to_numeric(tr0.get("_value_gap_eur"), errors="coerce"))
-            c1, c2, c3 = st.columns(3)
+            low0 = float(pd.to_numeric(tr0.get("_fair_low_eur"), errors="coerce")) if "_fair_low_eur" in tr0.index else np.nan
+            high0 = float(pd.to_numeric(tr0.get("_fair_high_eur"), errors="coerce")) if "_fair_high_eur" in tr0.index else np.nan
+            conf0 = str(tr0.get("_valuation_confidence", "") or "").strip()
+
+            c1, c2, c3, c4 = st.columns(4)
             c1.metric("Actual MV (EUR)", f"{mv0:,.0f}" if np.isfinite(mv0) else "na")
-            c2.metric("Expected MV (EUR)", f"{exp0:,.0f}" if np.isfinite(exp0) else "na")
-            c3.metric("Value gap (EUR)", f"{gap0:,.0f}" if np.isfinite(gap0) else "na")
+            c2.metric("Model fair value (EUR)", f"{exp0:,.0f}" if np.isfinite(exp0) else "na")
+            if np.isfinite(low0) and np.isfinite(high0):
+                c3.metric("Fair value range", f"{low0:,.0f} to {high0:,.0f}")
+            else:
+                c3.metric("Fair value range", "na")
+            c4.metric("Opportunity gap (EUR)", f"{gap0:,.0f}" if np.isfinite(gap0) else "na", help=f"Model confidence: {conf0 or 'na'}")
 
         # Radar
         if "go" in globals() and go is not None:
@@ -970,7 +1040,6 @@ def render_budget_alternatives_block_from_similarity(
 
     df = candidates_df.copy()
 
-    # Pick which score to value (use stage 2 if present)
     score_options = []
     if "RTR_Sim" in df.columns:
         score_options.append("RTR_Sim")
@@ -989,31 +1058,29 @@ def render_budget_alternatives_block_from_similarity(
         key=f"{key_prefix}_score_col",
     )
 
-    # Market value column
-    mv_series = None
     if "_mv_eur" in df.columns:
         mv_series = pd.to_numeric(df["_mv_eur"], errors="coerce")
     else:
-        mv_col = next((c for c in df.columns if c.lower() in {"market value", "market_value", "mv"}), None)
+        mv_col = next((c for c in df.columns if str(c).lower() in {"market value", "market_value", "mv"}), None)
         if mv_col is None:
             st.info("No market value column found for budget alternatives.")
             return
-        mv_str = df[mv_col].astype(str).str.replace(r"[^\d.]", "", regex=True)
-        mv_series = pd.to_numeric(mv_str, errors="coerce")
+        parser = globals().get("_mb_parse_value_eur")
+        if callable(parser):
+            mv_series = df[mv_col].apply(parser)
+        else:
+            mv_str = df[mv_col].astype(str).str.replace(r"[^\d.]", "", regex=True)
+            mv_series = pd.to_numeric(mv_str, errors="coerce")
 
-    df["_mv_eur"] = mv_series
+    df["_mv_eur"] = pd.to_numeric(mv_series, errors="coerce")
     df["_mv_eur"] = df["_mv_eur"].where(df["_mv_eur"] > 0)
+    df["_score"] = pd.to_numeric(df[score_col], errors="coerce").replace([np.inf, -np.inf], np.nan)
 
-    # Score numeric
-    df["_score"] = pd.to_numeric(df[score_col], errors="coerce")
-
-    # Basic columns for display
-    col_player = "Player" if "Player" in df.columns else next((c for c in df.columns if c.lower() == "player"), "Player")
-    col_team = "Team" if "Team" in df.columns else next((c for c in df.columns if c.lower() == "team"), "Team")
+    col_player = "Player" if "Player" in df.columns else next((c for c in df.columns if str(c).lower() == "player"), "Player")
+    col_team = "Team" if "Team" in df.columns else next((c for c in df.columns if str(c).lower() == "team"), "Team")
     col_age = "Age" if "Age" in df.columns else None
     col_mins = "Minutes" if "Minutes" in df.columns else ("Minutes played" if "Minutes played" in df.columns else None)
 
-    # Budget controls
     mv_max = df["_mv_eur"].max(skipna=True)
     if pd.isna(mv_max) or mv_max <= 0:
         st.info("Market values are missing or zero, cannot build budget alternatives.")
@@ -1050,47 +1117,42 @@ def render_budget_alternatives_block_from_similarity(
         key=f"{key_prefix}_top_n",
     )
 
-    # Remove the target itself
     t_name = str(target_row.get(col_player, target_row.get("Player", ""))).strip()
     t_team = str(target_row.get(col_team, target_row.get("Team", ""))).strip()
 
     is_target = (df[col_player].astype(str).str.strip() == t_name) & (df[col_team].astype(str).str.strip() == t_team)
     df = df[~is_target].copy()
 
-    # Budget filter + score threshold
-    df = df[df["_mv_eur"].notna() & df["_score"].notna()].copy()
-    df = df[(df["_mv_eur"] <= budget_max) & (df["_score"] >= score_thr)].copy()
+    model_pool = df[df["_mv_eur"].notna() & df["_score"].notna()].copy()
+    if model_pool.empty:
+        st.info("No players with both market value and score found.")
+        return
+
+    value_model = globals().get("_mb_apply_professional_value_model")
+    if callable(value_model):
+        model_pool, valuation_info = value_model(model_pool, perf_col="_score")
+    else:
+        baseline = float(model_pool["_mv_eur"].median(skipna=True))
+        model_pool["_fair_mv_eur"] = baseline
+        model_pool["_fair_low_eur"] = baseline * 0.70
+        model_pool["_fair_high_eur"] = baseline * 1.30
+        model_pool["_valuation_confidence"] = "Low"
+        valuation_info = {"status": "fallback", "rows_used": len(model_pool), "features_used": []}
+
+    model_pool["_exp_mv_eur"] = pd.to_numeric(model_pool.get("_fair_mv_eur"), errors="coerce")
+    model_pool["_value_gap_eur"] = model_pool["_exp_mv_eur"] - model_pool["_mv_eur"]
+    model_pool["_value_ratio"] = model_pool["_exp_mv_eur"] / model_pool["_mv_eur"].replace(0, np.nan)
+
+    rows_used = valuation_info.get("rows_used", 0) if isinstance(valuation_info, dict) else 0
+    model_status = valuation_info.get("status", "unknown") if isinstance(valuation_info, dict) else "unknown"
+    st.caption(f"Budget valuation model: {model_status} | training rows: {rows_used}")
+
+    df = model_pool[(model_pool["_mv_eur"] <= budget_max) & (model_pool["_score"] >= score_thr)].copy()
 
     if df.empty:
         st.info("No players match the budget and minimum score filters.")
         return
 
-    # Moneyball: expected MV from score vs MV relationship (log space)
-    y = np.log(df["_mv_eur"].to_numpy(dtype="float64"))
-    x = df["_score"].to_numpy(dtype="float64")
-
-    # z score x to stabilise fit
-    x_mu = np.nanmean(x)
-    x_sd = np.nanstd(x)
-    if not np.isfinite(x_sd) or x_sd == 0:
-        xz = x * 0.0
-    else:
-        xz = (x - x_mu) / x_sd
-
-    valid = np.isfinite(xz) & np.isfinite(y)
-    if valid.sum() < 8:
-        # fallback: simple ratio baseline
-        baseline = np.nanmedian(df["_mv_eur"].to_numpy(dtype="float64"))
-        df["_exp_mv_eur"] = baseline
-    else:
-        b1, b0 = np.polyfit(xz[valid], y[valid], 1)
-        y_hat = (b1 * xz) + b0
-        df["_exp_mv_eur"] = np.exp(y_hat)
-
-    df["_value_gap_eur"] = df["_exp_mv_eur"] - df["_mv_eur"]
-    df["_value_ratio"] = df["_exp_mv_eur"] / df["_mv_eur"]
-
-    # Blend: similarity first, then value (keeps “budget version” logic)
     def _z(s: "pd.Series") -> "pd.Series":
         m = s.mean(skipna=True)
         sd = s.std(skipna=True)
@@ -1098,28 +1160,54 @@ def render_budget_alternatives_block_from_similarity(
             return s * 0.0
         return (s - m) / sd
 
-    df["_budget_match_score"] = (0.7 * _z(df["_score"])) + (0.3 * _z(df["_value_ratio"]))
+    confidence_score = pd.to_numeric(df.get("_valuation_confidence_score", pd.Series(50.0, index=df.index)), errors="coerce").fillna(50.0)
+    df["_budget_match_score"] = (
+        0.60 * _z(df["_score"])
+        + 0.25 * _z(df["_value_ratio"])
+        + 0.15 * _z(confidence_score)
+    )
 
-    df = df.sort_values(["_budget_match_score", "_score", "_value_ratio"], ascending=[False, False, False]).head(top_n)
+    df = df.sort_values(
+        ["_budget_match_score", "_score", "_value_ratio", "_valuation_confidence_score"],
+        ascending=[False, False, False, False],
+    ).head(top_n)
 
     show_cols = [col_player, col_team]
-    if col_age: show_cols.append(col_age)
-    if col_mins: show_cols.append(col_mins)
+    if col_age:
+        show_cols.append(col_age)
+    if col_mins:
+        show_cols.append(col_mins)
     show_cols += [score_col]
 
     df_out = df.copy()
     df_out["Market value (€)"] = df_out["_mv_eur"].round(0).astype("Int64")
-    df_out["Expected MV (€)"] = df_out["_exp_mv_eur"].round(0).astype("Int64")
-    df_out["Value gap (€)"] = df_out["_value_gap_eur"].round(0).astype("Int64")
+    df_out["Model fair value (€)"] = df_out["_exp_mv_eur"].round(0).astype("Int64")
+    df_out["Fair range low (€)"] = pd.to_numeric(df_out.get("_fair_low_eur"), errors="coerce").round(0).astype("Int64")
+    df_out["Fair range high (€)"] = pd.to_numeric(df_out.get("_fair_high_eur"), errors="coerce").round(0).astype("Int64")
+    df_out["Opportunity gap (€)"] = df_out["_value_gap_eur"].round(0).astype("Int64")
     df_out["Value ratio"] = df_out["_value_ratio"].round(2)
     df_out["Budget match"] = df_out["_budget_match_score"].round(2)
+    if "_valuation_confidence" in df_out.columns:
+        df_out["Model confidence"] = df_out["_valuation_confidence"].astype(str)
+    else:
+        df_out["Model confidence"] = "Medium"
 
-    final_cols = show_cols + ["Market value (€)", "Expected MV (€)", "Value gap (€)", "Value ratio", "Budget match"]
+    final_cols = show_cols + [
+        "Market value (€)",
+        "Model fair value (€)",
+        "Fair range low (€)",
+        "Fair range high (€)",
+        "Opportunity gap (€)",
+        "Value ratio",
+        "Budget match",
+        "Model confidence",
+    ]
 
     st.dataframe(df_out[final_cols], use_container_width=True, hide_index=True)
 
     if export_buttons is not None:
         export_buttons(df_out[final_cols], key_suf=f"_{key_prefix}_budget_alts")
+
 
 
 #--------------------------------------------------------------------------------
@@ -7219,7 +7307,12 @@ def render_player_search_tab(
     if mv_col is None:
         st.info("Market value column not found in this pool.")
     else:
-        mv = pd.to_numeric(source_df[mv_col], errors="coerce")
+        parser = globals().get("_mb_parse_value_eur")
+        if callable(parser):
+            mv = source_df[mv_col].apply(parser)
+        else:
+            mv = pd.to_numeric(source_df[mv_col], errors="coerce")
+        mv = pd.to_numeric(mv, errors="coerce")
         mv = mv.where(mv > 0)
 
         if mv.notna().any():

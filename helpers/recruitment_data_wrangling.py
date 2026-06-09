@@ -1251,60 +1251,158 @@ def _percentile_of_value(series: pd.Series, v: float) -> float:
     return float((s <= float(v)).mean() * 100.0)
 
 def _mb_parse_value_eur(x):
-    if x is None or (isinstance(x, float) and np.isnan(x)):
+    if x is None:
         return np.nan
+    try:
+        if isinstance(x, float) and np.isnan(x):
+            return np.nan
+    except Exception:
+        pass
+
+    if isinstance(x, (int, float, np.integer, np.floating)):
+        val = float(x)
+        return val if np.isfinite(val) and val > 0 else np.nan
+
     s = str(x).strip().lower()
-    if not s:
+    if not s or s in {"nan", "none", "na", "n/a", "-"}:
         return np.nan
 
-    s = s.replace(",", "").replace(" ", "")
-    mult = 1.0
-    if "m" in s:
-        mult = 1000000.0
-    elif "k" in s:
-        mult = 1000.0
+    s = (
+        s.replace("€", "")
+         .replace("eur", "")
+         .replace("£", "")
+         .replace("$", "")
+         .replace("value", "")
+         .replace("market", "")
+         .strip()
+    )
+    s = s.replace("\u00a0", "").replace(" ", "")
+    s = s.replace(",", ".") if _re.search(r"\d,\d{1,2}\s*[mk]", s) else s.replace(",", "")
 
-    m = _re.findall(r"\d+\.?\d*", s)
+    mult = 1.0
+    if any(tok in s for tok in ["million", "mill", "mio", "mn"]) or s.endswith("m"):
+        mult = 1_000_000.0
+    elif any(tok in s for tok in ["thousand", "ths", "k"]) or s.endswith("k"):
+        mult = 1_000.0
+
+    m = _re.findall(r"\d+(?:\.\d+)?", s)
     if not m:
         return np.nan
-    return float(m[0]) * mult
+
+    val = float(m[0]) * mult
+    return val if np.isfinite(val) and val > 0 else np.nan
 
 
 def _mb_parse_contract_dt(x):
-    if x is None or (isinstance(x, float) and np.isnan(x)):
+    if x is None:
         return pd.NaT
-    return pd.to_datetime(x, errors="coerce", dayfirst=True)
+    try:
+        if isinstance(x, float) and np.isnan(x):
+            return pd.NaT
+    except Exception:
+        pass
+    s = str(x).strip()
+    if not s or s.casefold() in {"nan", "none", "free", "unknown"}:
+        return pd.NaT
+    return pd.to_datetime(s, errors="coerce", dayfirst=True)
 
 
-def _mb_winsorise_series(s, p=0.01):
-    s = pd.to_numeric(s, errors="coerce")
+def _mb_winsorise_series(s, p=0.02):
+    s = pd.to_numeric(s, errors="coerce").replace([np.inf, -np.inf], np.nan)
+    if s.notna().sum() < 5:
+        return s
     lo = s.quantile(p)
     hi = s.quantile(1.0 - p)
     return s.clip(lower=lo, upper=hi)
 
 
 def _mb_zscore_series(s):
-    s = pd.to_numeric(s, errors="coerce")
-    mu = s.mean()
-    sd = s.std(ddof=0)
+    s = pd.to_numeric(s, errors="coerce").replace([np.inf, -np.inf], np.nan)
+    mu = s.mean(skipna=True)
+    sd = s.std(ddof=0, skipna=True)
     if sd is None or (isinstance(sd, float) and np.isnan(sd)) or sd == 0:
-        return s.copy() * 0.0
+        return pd.Series(np.zeros(len(s)), index=s.index, dtype="float64")
     return pd.Series(np.divide(np.subtract(s.values, mu), sd), index=s.index)
 
 
+def _mb_robust_zscore_series(s):
+    s = pd.to_numeric(s, errors="coerce").replace([np.inf, -np.inf], np.nan)
+    med = s.median(skipna=True)
+    mad = (s - med).abs().median(skipna=True)
+    if pd.notna(mad) and float(mad) > 0:
+        return ((s - med) / (1.4826 * float(mad))).clip(-3.5, 3.5)
+    return _mb_zscore_series(s).clip(-3.5, 3.5)
+
+
 def _mb_pick_col(df, candidates):
+    if df is None or not hasattr(df, "columns"):
+        return None
+    exact = {str(c): c for c in df.columns}
+    lower = {str(c).strip().casefold(): c for c in df.columns}
     for c in candidates:
-        if c in df.columns:
-            return c
+        if c in exact:
+            return exact[c]
+        key = str(c).strip().casefold()
+        if key in lower:
+            return lower[key]
     return None
+
+
+def _mb_position_group(pos_text: str) -> str:
+    t = str(pos_text or "").strip().casefold()
+    if "gk" in t:
+        return "GK"
+    if any(x in t for x in ["cb", "lcb", "rcb", "centre back", "center back"]):
+        return "CB"
+    if any(x in t for x in ["lb", "rb", "lwb", "rwb", "full back", "fullback", "wing back", "wingback"]):
+        return "FB"
+    if any(x in t for x in ["dmf", "ldmf", "rdmf", "dm", "dmc"]):
+        return "DM"
+    if any(x in t for x in ["cmf", "lcmf", "rcmf", "cm", "mc"]):
+        return "CM"
+    if any(x in t for x in ["amf", "lamf", "ramf", "am", "cam", "ss"]):
+        return "AM"
+    if any(x in t for x in ["lwf", "rwf", "wf"]):
+        return "WF"
+    if any(x in t for x in ["lw", "rw", "lm", "rm", "winger"]):
+        return "WM"
+    if any(x in t for x in ["cf", "st", "striker", "forward"]):
+        return "CF"
+    return "Other"
+
+
+def _mb_series_or_default(df, candidates, default=np.nan):
+    col = _mb_pick_col(df, candidates)
+    if col is None:
+        return pd.Series(default, index=df.index, dtype="float64"), None
+    return pd.to_numeric(df[col], errors="coerce").replace([np.inf, -np.inf], np.nan), col
+
+
+def _mb_value_league_factor(df: pd.DataFrame) -> pd.Series:
+    for c in ["_strength_factor", "__strength_factor", "_elo_factor", "__elo_factor", "__tier_factor", "_tier_factor"]:
+        if c in df.columns:
+            vals = pd.to_numeric(df[c], errors="coerce").replace([np.inf, -np.inf], np.nan)
+            if vals.notna().any():
+                return vals.fillna(vals.median(skipna=True)).clip(0.55, 1.65)
+
+    if "Elo" in df.columns:
+        elo = pd.to_numeric(df["Elo"], errors="coerce").replace([np.inf, -np.inf], np.nan)
+        if elo.notna().any():
+            med = elo.median(skipna=True)
+            return (1.0 + ((elo.fillna(med) - med) / 1000.0)).clip(0.65, 1.55)
+
+    tier_col = _mb_pick_col(df, ["__tier", "Tier", "tier"])
+    if tier_col is not None:
+        tier = pd.to_numeric(df[tier_col], errors="coerce")
+        mapped = tier.map({1.0: 1.08, 2.0: 0.92, 3.0: 0.78, 4.0: 0.66, 5.0: 0.58})
+        return mapped.fillna(0.90).clip(0.55, 1.25)
+
+    return pd.Series(1.0, index=df.index, dtype="float64")
 
 
 def _mb_build_perf_score(df, kpi_cols, metric_direction=None):
     """
-    Builds a single performance score from KPI columns (winsorised + z-scored).
-    Supports:
-      1) metric_direction as a callable: metric_direction(col) -> bool (True = higher is better)
-      2) metric_direction as a dict: {col: "high"/"low"} or {col: True/False}
+    Builds a single performance score from KPI columns with robust scaling and minutes shrinkage.
     """
     use_cols = [c for c in kpi_cols if c in df.columns]
     if not use_cols:
@@ -1317,12 +1415,10 @@ def _mb_build_perf_score(df, kpi_cols, metric_direction=None):
     md_dict = metric_direction if isinstance(metric_direction, dict) else {}
 
     for c in use_cols:
-        s = _mb_winsorise_series(work[c])
+        s = _mb_winsorise_series(work[c], p=0.02)
 
-        # decide direction
         invert = False
         if md_callable:
-            # callable returns True if higher is better
             invert = not bool(metric_direction(c))
         else:
             v = md_dict.get(c, "high")
@@ -1335,33 +1431,251 @@ def _mb_build_perf_score(df, kpi_cols, metric_direction=None):
         if invert:
             s = pd.Series(np.negative(s.values), index=s.index)
 
-        z = _mb_zscore_series(s)
+        z = _mb_robust_zscore_series(s)
         work[c] = z
         z_cols.append(c)
 
     perf = work[z_cols].mean(axis=1)
+
+    mins, _mins_col = _mb_series_or_default(work, ["Minutes played", "Minutes", "Min", "Mins"], default=np.nan)
+    if mins.notna().any():
+        mins_clean = mins.fillna(0.0).clip(lower=0.0)
+        reliability = (mins_clean / (mins_clean + 900.0)).clip(0.0, 1.0)
+        perf = (perf * reliability) + (perf.median(skipna=True) * (1.0 - reliability))
+
     return perf, z_cols
 
+
+def _mb_standardise_matrix(X: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    X = np.asarray(X, dtype="float64")
+    mu = np.nanmean(X, axis=0)
+    sd = np.nanstd(X, axis=0)
+    sd = np.where(np.isfinite(sd) & (sd > 0), sd, 1.0)
+    Xs = (X - mu) / sd
+    Xs = np.nan_to_num(Xs, nan=0.0, posinf=0.0, neginf=0.0)
+    return Xs, mu, sd
+
+
+def _mb_weighted_ridge_huber(X: np.ndarray, y: np.ndarray, base_weight: np.ndarray, ridge: float = 1.25) -> tuple[np.ndarray, np.ndarray, float]:
+    X = np.asarray(X, dtype="float64")
+    y = np.asarray(y, dtype="float64")
+    w = np.asarray(base_weight, dtype="float64")
+    w = np.where(np.isfinite(w) & (w > 0), w, 1.0)
+
+    beta = np.zeros(X.shape[1], dtype="float64")
+    eye = np.eye(X.shape[1], dtype="float64")
+    eye[0, 0] = 0.0
+
+    for _ in range(5):
+        sw = np.sqrt(w)
+        Xw = X * sw[:, None]
+        yw = y * sw
+        try:
+            beta = np.linalg.solve(Xw.T @ Xw + ridge * eye, Xw.T @ yw)
+        except np.linalg.LinAlgError:
+            beta = np.linalg.lstsq(Xw.T @ Xw + ridge * eye, Xw.T @ yw, rcond=None)[0]
+
+        resid = y - (X @ beta)
+        med = np.nanmedian(resid)
+        mad = np.nanmedian(np.abs(resid - med))
+        scale = 1.4826 * mad if np.isfinite(mad) and mad > 0 else np.nanstd(resid)
+        if not np.isfinite(scale) or scale <= 0:
+            scale = 0.35
+
+        huber = np.minimum(1.0, (1.65 * scale) / np.maximum(np.abs(resid), 1e-9))
+        w = np.asarray(base_weight, dtype="float64") * huber
+
+    pred = X @ beta
+    resid = y - pred
+    scale = np.nanmedian(np.abs(resid - np.nanmedian(resid))) * 1.4826
+    if not np.isfinite(scale) or scale <= 0:
+        scale = np.nanstd(resid)
+    if not np.isfinite(scale) or scale <= 0:
+        scale = 0.45
+
+    return beta, pred, float(scale)
+
+
+def _mb_apply_professional_value_model(df: pd.DataFrame, perf_col: str = "_perf_z") -> tuple[pd.DataFrame, dict]:
+    """
+    Builds a more stable fair value estimate from internal market values.
+
+    It uses log market value as the target and blends a robust fitted model with
+    positional cohort medians. The output is an estimate, not a transfer fee.
+    """
+    out = df.copy()
+    info = {
+        "status": "not_run",
+        "rows_used": 0,
+        "features_used": [],
+        "model_weight": 0.0,
+        "residual_scale": np.nan,
+    }
+
+    if out.empty:
+        return out, info
+
+    if "_mv_eur" not in out.columns:
+        mv_col = _mb_pick_col(out, ["Market value", "Market Value", "MV", "Transfermarkt value", "Transfermarkt Value"])
+        out["_mv_eur"] = out[mv_col].apply(_mb_parse_value_eur) if mv_col else np.nan
+    else:
+        out["_mv_eur"] = pd.to_numeric(out["_mv_eur"], errors="coerce")
+
+    age, age_col = _mb_series_or_default(out, ["Age", "Player age"], default=np.nan)
+    mins, mins_col = _mb_series_or_default(out, ["Minutes played", "Minutes", "Min", "Mins"], default=np.nan)
+    perf = pd.to_numeric(out.get(perf_col, pd.Series(np.nan, index=out.index)), errors="coerce").replace([np.inf, -np.inf], np.nan)
+
+    if perf.notna().sum() < 5:
+        perf = pd.Series(0.0, index=out.index, dtype="float64")
+    else:
+        perf = perf.fillna(perf.median(skipna=True))
+
+    pos_col = _mb_pick_col(out, ["Position", "Primary position", "Primary Position", "Pos"])
+    if pos_col is not None:
+        out["_mb_position_group"] = out[pos_col].astype(str).map(_mb_position_group)
+    else:
+        out["_mb_position_group"] = "Other"
+
+    if "_contract_dt" not in out.columns:
+        contract_col = _mb_pick_col(out, ["Contract expires", "Contract expiry", "Contract Expiry", "Contract until", "Contract Until"])
+        out["_contract_dt"] = out[contract_col].apply(_mb_parse_contract_dt) if contract_col else pd.NaT
+
+    today = pd.Timestamp.today().normalize()
+    contract_days = pd.to_datetime(out["_contract_dt"], errors="coerce").sub(today).dt.days
+    contract_months = pd.Series(np.divide(contract_days.values.astype(float), 30.0), index=out.index)
+    contract_years = (contract_months / 12.0).clip(-0.5, 5.0)
+
+    league_factor = _mb_value_league_factor(out)
+    mins_clean = mins.fillna(0.0).clip(lower=0.0)
+    log_mins = np.log1p(mins_clean).replace([np.inf, -np.inf], np.nan)
+
+    age_clean = age.copy()
+    if age_clean.notna().any():
+        age_clean = age_clean.fillna(age_clean.median(skipna=True)).clip(15.0, 40.0)
+    else:
+        age_clean = pd.Series(25.0, index=out.index, dtype="float64")
+
+    age_peak_distance = (age_clean - 24.0).abs()
+    age_squared = (age_clean - 24.0) ** 2
+    perf_age = perf * (1.0 / (1.0 + age_peak_distance))
+    perf_mins = perf * (mins_clean / (mins_clean + 900.0)).fillna(0.0)
+
+    numeric_features = pd.DataFrame(
+        {
+            "performance": perf,
+            "age": age_clean,
+            "age_squared": age_squared,
+            "distance_from_peak_age": age_peak_distance,
+            "log_minutes": log_mins,
+            "contract_years": contract_years.fillna(contract_years.median(skipna=True) if contract_years.notna().any() else 1.5),
+            "league_strength": league_factor,
+            "performance_age_interaction": perf_age,
+            "performance_minutes_interaction": perf_mins,
+        },
+        index=out.index,
+    )
+
+    numeric_features = numeric_features.replace([np.inf, -np.inf], np.nan)
+    for c in numeric_features.columns:
+        med = numeric_features[c].median(skipna=True)
+        numeric_features[c] = numeric_features[c].fillna(med if np.isfinite(med) else 0.0)
+
+    pos_dummies = pd.get_dummies(out["_mb_position_group"], prefix="pos", dtype=float)
+    feature_frame = pd.concat([numeric_features, pos_dummies], axis=1)
+    feature_names = feature_frame.columns.tolist()
+
+    y = pd.to_numeric(out["_mv_eur"], errors="coerce")
+    y = y.where((y > 0) & np.isfinite(y))
+    log_y = np.log(y)
+
+    valid = log_y.notna() & feature_frame.notna().all(axis=1)
+    valid = valid & y.between(20_000, 250_000_000, inclusive="both")
+
+    if int(valid.sum()) < 18:
+        global_log = float(np.nanmedian(log_y[log_y.notna()])) if log_y.notna().any() else np.log(250_000.0)
+        pos_log = out.groupby("_mb_position_group")["_mv_eur"].transform(lambda s: np.log(pd.to_numeric(s, errors="coerce").dropna()).median())
+        baseline_log = pos_log.fillna(global_log)
+        out["_fair_log_mv"] = baseline_log
+        out["_fair_mv_eur"] = np.exp(out["_fair_log_mv"])
+        out["_fair_low_eur"] = out["_fair_mv_eur"] * 0.70
+        out["_fair_high_eur"] = out["_fair_mv_eur"] * 1.30
+        out["_valuation_confidence"] = "Low"
+        out["_valuation_method"] = "positional median fallback"
+        info.update({"status": "fallback", "rows_used": int(valid.sum()), "model_weight": 0.0})
+        return out, info
+
+    X_raw = feature_frame.to_numpy(dtype="float64")
+    Xs, _mu, _sd = _mb_standardise_matrix(X_raw)
+    X = np.column_stack([np.ones(len(out)), Xs])
+
+    train_mask = valid.values
+    train_y = log_y.values[train_mask]
+
+    train_mins = mins_clean.values[train_mask]
+    minutes_weight = 0.35 + (0.65 * (train_mins / (train_mins + 900.0)))
+    minutes_weight = np.where(np.isfinite(minutes_weight), minutes_weight, 0.50)
+
+    beta, train_pred, scale = _mb_weighted_ridge_huber(X[train_mask], train_y, minutes_weight, ridge=1.25)
+    pred_log_model = pd.Series(X @ beta, index=out.index)
+
+    global_log = float(np.nanmedian(log_y[valid]))
+    pos_log_map = out.loc[valid].groupby("_mb_position_group")["_mv_eur"].median().map(np.log)
+    baseline_log = out["_mb_position_group"].map(pos_log_map).fillna(global_log).astype(float)
+
+    n_train = int(valid.sum())
+    model_weight = float(np.clip((n_train - 15.0) / 75.0, 0.35, 0.88))
+    reliability = (mins_clean / (mins_clean + 900.0)).clip(0.0, 1.0).fillna(0.0)
+    row_weight = (model_weight * (0.45 + 0.55 * reliability)).clip(0.20, 0.90)
+
+    fair_log = (row_weight * pred_log_model) + ((1.0 - row_weight) * baseline_log)
+    low_cap = float(np.nanpercentile(y[valid], 2.0))
+    high_cap = float(np.nanpercentile(y[valid], 98.0))
+    if not np.isfinite(low_cap) or low_cap <= 0:
+        low_cap = 20_000.0
+    if not np.isfinite(high_cap) or high_cap <= low_cap:
+        high_cap = max(low_cap * 3.0, float(np.nanmax(y[valid])))
+
+    fair_mv = np.exp(fair_log).clip(low_cap * 0.60, high_cap * 1.40)
+
+    uncertainty = (0.42 + (1.0 - reliability) * 0.30 + max(0.0, 0.55 - model_weight) * 0.40).clip(0.30, 0.85)
+    out["_fair_log_mv"] = np.log(fair_mv)
+    out["_fair_mv_eur"] = fair_mv
+    out["_fair_low_eur"] = np.exp(out["_fair_log_mv"] - uncertainty).clip(lower=10_000.0)
+    out["_fair_high_eur"] = np.exp(out["_fair_log_mv"] + uncertainty).clip(upper=high_cap * 1.80)
+    out["_valuation_confidence_score"] = (100.0 * row_weight).clip(0.0, 100.0)
+    out["_valuation_confidence"] = pd.cut(
+        out["_valuation_confidence_score"],
+        bins=[-0.1, 40.0, 60.0, 78.0, 100.1],
+        labels=["Low", "Medium", "High", "Very high"],
+    ).astype(str)
+    out["_valuation_method"] = "robust log value model"
+
+    info.update(
+        {
+            "status": "modelled",
+            "rows_used": n_train,
+            "features_used": feature_names,
+            "model_weight": model_weight,
+            "residual_scale": scale,
+        }
+    )
+    return out, info
 
 
 def _mb_fit_expected_value(log_mv, perf, age=None):
     y = pd.to_numeric(log_mv, errors="coerce")
     x1 = pd.to_numeric(perf, errors="coerce").fillna(0.0)
 
-    X_parts = [np.ones(len(y)), x1.values]
+    temp = pd.DataFrame({"_mv_eur": np.exp(y), "_perf_z": x1}, index=y.index)
     if age is not None:
-        x2 = pd.to_numeric(age, errors="coerce")
-        x2 = x2.fillna(x2.median() if np.isfinite(x2.median()) else 0.0)
-        X_parts.append(x2.values)
+        temp["Age"] = pd.to_numeric(age, errors="coerce")
 
-    X = np.column_stack(X_parts)
-    mask = np.isfinite(y.values) & np.isfinite(X).all(axis=1)
-    if mask.sum() < 10:
-        return pd.Series(np.nan, index=y.index)
+    modelled, _info = _mb_apply_professional_value_model(temp, perf_col="_perf_z")
+    if "_fair_log_mv" in modelled.columns:
+        return pd.Series(modelled["_fair_log_mv"].values, index=y.index)
 
-    beta = np.linalg.lstsq(X[mask], y.values[mask], rcond=None)[0]
-    yhat = X.dot(beta)
-    return pd.Series(yhat, index=y.index)
+    return pd.Series(np.nan, index=y.index)
+
 
 def _as_float(x):
     try:
@@ -2316,4 +2630,4 @@ def _attach_league_strength(df: pd.DataFrame) -> pd.DataFrame:
 
     return out
 
-__all__ = ['ENCODING_CANDIDATES', '_strip_accents', 'WYSROOTDIR', 'REFERENCE_PLAYERS_PATH', 'CLUBELO_DIR', '_clubelo_latest_path', '_clubelo_dated_path', 'fetch_today', 'update_clubelo_cache_if_needed', '_club_key', '_load_clubelo_cache', '_attach_elo_factor', '_attach_tier_factor', '_apply_league_normalisation', '_norm_league_key_for_tier', '_tier_one_benchmark_cohort', '_apply_league_factor_to_kpis', '_POSITION_ALIAS_MAP', '_normalise_pos_text', 'WS_POS_TO_ROLE_PROFILE', 'WS_POS_ORDER', 'WS_POS_COMPAT', '_WS_POS_CODE_RE', '_ws_pos_tokens', '_ROLE_PRESET_LABEL_TO_PROFILE_KEY', '_preset_label_to_profile_key', '_text_to_profile_key', '_infer_profile_key', 'TOP5_NATIONS', 'NEXT7_NATIONS', '_leaguekey_parts', '_tier1_divs_for_nations', '_dedupe_keep_order', '_unpack_rule', '_zscore_series', '_ensure_z_and_pct', '_score_from_spec_z', '_compute_label_scores', '_metric_goodness_pct', '_score_bundle', '_cosine_1d', '_trait_defs_for_role_group', '_compute_rtr_vectors', 'rerank_candidates_by_rtr', '_percentile_of_value', '_mb_parse_value_eur', '_mb_parse_contract_dt', '_mb_winsorise_series', '_mb_zscore_series', '_mb_pick_col', '_mb_build_perf_score', '_mb_fit_expected_value', '_as_float', '_pick_minutes', '_confidence_from_minutes', '_infer_profile_key_from_position_text', '_detail_to_gap_rows', '_coverage_and_avg_gap', '_score_roles_traits_responsibilities_global', 'calculate_search_tab_gaps', '_load_prev_season_master', '_load_reference_players_default', '_metric_phase', '_get_metric_value', '_infer_archetypes_for_row', '_sniff_delimiter', 'read_csv_resilient', 'read_xlsx_resilient', '_build_global_wyscout_master', '_percentile_rank', '_pct_bar_html', 'parse_market_value', 'parse_minutes', '_parse_height_m', '_restrict_to_three_nations', '_find_metric_col', '_collect_country_frames', '_attach_league_strength']
+__all__ = ['ENCODING_CANDIDATES', '_strip_accents', 'WYSROOTDIR', 'REFERENCE_PLAYERS_PATH', 'CLUBELO_DIR', '_clubelo_latest_path', '_clubelo_dated_path', 'fetch_today', 'update_clubelo_cache_if_needed', '_club_key', '_load_clubelo_cache', '_attach_elo_factor', '_attach_tier_factor', '_apply_league_normalisation', '_norm_league_key_for_tier', '_tier_one_benchmark_cohort', '_apply_league_factor_to_kpis', '_POSITION_ALIAS_MAP', '_normalise_pos_text', 'WS_POS_TO_ROLE_PROFILE', 'WS_POS_ORDER', 'WS_POS_COMPAT', '_WS_POS_CODE_RE', '_ws_pos_tokens', '_ROLE_PRESET_LABEL_TO_PROFILE_KEY', '_preset_label_to_profile_key', '_text_to_profile_key', '_infer_profile_key', 'TOP5_NATIONS', 'NEXT7_NATIONS', '_leaguekey_parts', '_tier1_divs_for_nations', '_dedupe_keep_order', '_unpack_rule', '_zscore_series', '_ensure_z_and_pct', '_score_from_spec_z', '_compute_label_scores', '_metric_goodness_pct', '_score_bundle', '_cosine_1d', '_trait_defs_for_role_group', '_compute_rtr_vectors', 'rerank_candidates_by_rtr', '_percentile_of_value', '_mb_parse_value_eur', '_mb_parse_contract_dt', '_mb_winsorise_series', '_mb_zscore_series', '_mb_pick_col', '_mb_build_perf_score', '_mb_apply_professional_value_model', '_mb_fit_expected_value', '_as_float', '_pick_minutes', '_confidence_from_minutes', '_infer_profile_key_from_position_text', '_detail_to_gap_rows', '_coverage_and_avg_gap', '_score_roles_traits_responsibilities_global', 'calculate_search_tab_gaps', '_load_prev_season_master', '_load_reference_players_default', '_metric_phase', '_get_metric_value', '_infer_archetypes_for_row', '_sniff_delimiter', 'read_csv_resilient', 'read_xlsx_resilient', '_build_global_wyscout_master', '_percentile_rank', '_pct_bar_html', 'parse_market_value', 'parse_minutes', '_parse_height_m', '_restrict_to_three_nations', '_find_metric_col', '_collect_country_frames', '_attach_league_strength']
