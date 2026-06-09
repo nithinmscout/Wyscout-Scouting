@@ -1,0 +1,501 @@
+Player,Team,Position,Age,Market value,Contract expires,Matches played,Minutes played,Goals,xG,Birth country,Passport country,Foot,Height,Weight,On loan
+J. Millán,Nacional,LCB,27,0,2027-12-31,38,3712,2,2.14,Colombia,Colombia,left,186,75,no
+L. Amadé,Racing,GK,25,25000,2025-12-31,37,3641,0,0,Argentina,Argentina,right,193,87,yes
+K. Dawson,Defensor Sporting,GK,33,700000,,37,3635,0,0,Uruguay,Uruguay,right,178,81,no
+M. Goicoechea,Danubio,GK,37,100000,2026-12-31,37,3626,0,0,Uruguay,"Uruguay, Italy",right,186,82,no
+G. Santilli,Cerro Largo,GK,24,0,2026-12-31,36,3553,1,0.04,Argentina,Argentina,right,191,74,no
+Y. Calleros,Plaza Colonia,RCMF,27,600000,,36,3505,0,0.57,Uruguay,Uruguay,right,181,77,no
+C. Almeida,River Plate,LCB,35,100000,,35,3446,4,2.59,Uruguay,Uruguay,left,170,65,no
+G. Kagelmacher,Torque,LCB,37,300000,,35,3445,3,2.84,Uruguay,"Uruguay, Germany",right,183,79,no
+G. de los Santos,Defensor Sporting,RCB,34,300000,,35,3415,4,4.06,Uruguay,Uruguay,right,181,75,no
+J. Viacava,Defensor Sporting,LCB,26,250000,2025-12-31,35,3407,0,0.1,Uruguay,"Uruguay, Italy",left,182,77,no
+L. Boggio,Nacional,"LCMF, RCMF, RDMF",26,0,2027-12-31,38,3397,3,4.38,Uruguay,"Uruguay, Italy",right,175,69,no
+N. Gentilio,Progreso,GK,38,25000,,34,3354,0,0,Uruguay,Uruguay,left,180,73,no
+S. Coates,Nacional,RCB,35,3500000,2025-12-31,35,3343,1,3.12,Uruguay,"Uruguay, Spain",right,196,94,no
+E. Más,Juventud,LB,36,100000,2025-12-31,35,3336,1,0.77,Argentina,"Argentina, Italy",left,180,82,no
+S. Sosa,Juventud,GK,39,250000,2025-12-31,34,3334,0,0,Uruguay,"Uruguay, Mexico",right,181,74,no
+J. Silva,Plaza Colonia,GK,28,250000,,34,3332,0,0,Uruguay,Uruguay,right,196,98,no
+M. Ferreira,Racing,"LCB, LWB, LB",33,350000,,36,3318,1,2.69,Uruguay,Uruguay,left,177,74,no
+L. Fernández,Peñarol,"AMF, CF",27,7500000,2026-12-31,35,3312,11,9.66,Uruguay,Uruguay,left,166,62,no
+I. Rossi,Juventud,"DMF, LCMF, RCMF",32,300000,2025-12-31,34,3291,0,0.32,Argentina,"Argentina, Italy",left,183,75,no
+L. Zazpe,Wanderers,"LCB, CB",31,350000,,34,3272,1,1.66,Uruguay,Uruguay,left,184,70,no
+M. Rea,Liverpool,RCB,28,700000,,34,3262,1,0.84,Uruguay,Uruguay,right,184,79,no
+F. Barrandeguy,Juventud,RB,29,325000,,35,3213,1,0.33,Uruguay,Uruguay,right,176,69,no
+B. Antúnez,Boston River,GK,22,0,2026-12-31,33,3210,0,0,Uruguay,Uruguay,,0,0,no
+A. Hernández,Liverpool,CF,35,450000,,37,3206,25,19.03,Uruguay,Uruguay,left,185,70,no
+Ó. Olivera,Miramar Misiones,"RCB, RB",26,0,2025-12-31,33,3173,1,1.46,Uruguay,Uruguay,,0,0,no
+G. Cotugno,Racing,"RCB, RWB, RB",30,800000,2025-12-31,33,3157,3,2.27,Uruguay,"Uruguay, Italy",right,177,75,no
+M. Rabuñal,Liverpool,DMF,31,300000,,34,3145,2,2.12,Uruguay,Uruguay,right,183,72,no
+N. Vallejo,Liverpool,"LW, LWF, LAMF",21,0,2026-12-31,36,3102,4,5.65,Argentina,Argentina,right,170,69,yes
+K. Amaro,Liverpool,"RW, RB, RWF",21,0,2028-10-29,34,3083,1,2.25,Uruguay,Uruguay,right,177,72,no
+N. Olivera,Progreso,LCB,32,200000,,31,3069,2,1.87,Uruguay,Uruguay,left,193,95,no
+L. Mejía,Nacional,GK,34,400000,2026-12-31,31,3059,0,0,Panama,"Panama, Uruguay",left,193,81,no
+F. Bonifazi,Cerro Largo,LB,30,200000,,34,3059,1,1.82,Uruguay,"Uruguay, Italy",left,174,68,no
+J. Álvarez,Defensor Sporting,"LB, LW, LAMF",30,450000,2025-12-31,34,3058,2,1.97,Uruguay,Uruguay,left,173,65,no
+A. Assis,Cerro Largo,"RCMF, LCMF",32,300000,,32,3028,1,1.49,Uruguay,Uruguay,right,171,75,no
+S. Lentinelly,Liverpool,GK,28,0,2025-12-31,30,2953,0,0,Uruguay,"Uruguay, Italy",right,183,82,no
+M. Silvera,Peñarol,CF,28,1500000,,35,2922,11,13.96,Uruguay,Uruguay,right,176,68,no
+C. Oliva,Nacional,"LCMF, RCMF, LDMF",29,0,2026-12-31,33,2885,2,1.85,Uruguay,Uruguay,right,178,77,no
+F. Silvera,Torque,LB,28,300000,2026-12-31,35,2879,2,1.3,Uruguay,Uruguay,left,173,73,no
+P. Lima,Wanderers,"RCMF, LCMF",35,400000,,33,2817,2,2.35,Uruguay,"Uruguay, Italy",right,181,80,no
+M. Gómez,Nacional,CF,29,0,2026-12-31,30,2817,12,10.22,Uruguay,Uruguay,right,186,91,no
+E. da Silva,Racing,"CF, RWB, RWF",24,325000,2025-12-31,33,2793,6,6.95,Uruguay,Uruguay,right,168,0,no
+J. Neris,Torque,CF,25,0,2025-12-31,34,2762,16,18.59,Uruguay,Uruguay,right,183,82,yes
+F. Perdomo,Liverpool,RB,26,0,2027-12-31,32,2749,0,0.17,Uruguay,Uruguay,right,174,64,no
+J. Urretaviscaya,Juventud,"AMF, CF",35,200000,,33,2726,2,3.74,Uruguay,"Uruguay, Spain",right,172,64,no
+N. López,Nacional,"CF, AMF",32,2000000,2026-12-31,35,2723,21,16.71,Uruguay,Uruguay,left,177,72,no
+I. Sosa,Peñarol,"RDMF, LDMF, LCMF",22,0,2029-06-30,33,2723,2,2.35,Uruguay,Uruguay,right,175,70,no
+L. Sanseviero,Danubio,"RW, RAMF, CF",25,0,2025-12-31,35,2710,5,6.45,Uruguay,Uruguay,right,180,72,no
+A. Rodríguez,Juventud,CF,27,0,2027-12-31,31,2694,18,17.08,Uruguay,Uruguay,right,184,0,no
+J. Ayala,Miramar Misiones,"CB, RCB, LCB",30,350000,,27,2673,4,2.51,Uruguay,Uruguay,right,187,74,no
+E. Velázquez,Danubio,LCB,31,300000,2025-12-31,29,2671,1,1.49,Uruguay,Uruguay,right,184,79,no
+M. Vera,Boston River,"DMF, LDMF, LCMF",27,250000,,30,2669,0,1.43,Argentina,Argentina,left,180,73,no
+P. Siles,Torque,"DMF, RCMF, LCMF",28,350000,2026-12-31,35,2665,1,0.48,Uruguay,Uruguay,right,175,68,no
+J. Méndez,Peñarol,RCB,30,600000,,31,2665,2,2.01,Uruguay,Uruguay,right,184,83,no
+P. Milans,Peñarol,RB,23,0,2025-12-31,31,2643,0,0.83,Uruguay,Uruguay,right,171,69,no
+R. Peralta,Juventud,"LCMF, LW",22,0,2027-12-31,36,2640,1,2.64,Argentina,Argentina,right,170,64,no
+M. Olivera,Peñarol,LB,33,750000,,30,2613,6,3.18,Uruguay,"Uruguay, Spain",left,185,72,no
+A. Colombino,Progreso,"DMF, RDMF, RCMF",32,300000,,29,2584,1,0.29,Uruguay,Uruguay,right,177,74,no
+A. Di Pippa,Cerro Largo,"RCB, LCB",25,0,2025-12-31,31,2569,1,1.89,Argentina,Argentina,right,179,75,no
+A. Pinheiro,Progreso,"RB, RCMF, DMF",23,0,2025-12-31,34,2565,1,0.76,Uruguay,Uruguay,,0,0,no
+F. Correa,River Plate,GK,24,250000,2025-12-31,26,2565,1,0.76,Uruguay,Uruguay,right,189,82,no
+A. Amado,Boston River,"RCMF, RDMF",24,400000,,32,2541,0,1.07,Uruguay,Uruguay,right,173,68,no
+G. Nápoli,Liverpool,LCMF,25,1500000,2026-12-31,34,2536,0,3.49,Uruguay,Uruguay,left,178,67,yes
+F. Martínez,Boston River,LB,24,300000,2025-12-31,28,2535,0,0.03,Uruguay,Uruguay,left,170,68,no
+J. Cruz de los Santos,Nacional,"LW, LAMF",22,0,2027-12-31,31,2533,5,4.66,Uruguay,Uruguay,left,174,72,no
+N. Herrera,Peñarol,"LCB, RCB",20,0,2027-12-31,28,2524,1,0.54,Uruguay,Uruguay,right,186,85,no
+E. Larrosa,Cerro,CF,24,300000,,29,2490,9,8.24,Uruguay,Uruguay,left,185,75,yes
+J. Acosta,Boston River,RB,32,300000,,29,2485,1,0.9,Uruguay,Uruguay,right,174,70,no
+H. Ruíz Díaz,Plaza Colonia,LCB,33,300000,,26,2460,3,1.3,Uruguay,Uruguay,right,179,70,no
+W. Nunez,Torque,"LWF, LW, CF",22,0,2027-12-31,35,2458,5,4.64,Argentina,Argentina,right,177,0,no
+M. González,Danubio,"RCB, RB",22,0,2025-12-31,26,2447,3,1.58,Uruguay,Uruguay,right,183,77,no
+A. Teuten,Wanderers,"LWB, LB",27,500000,,32,2442,0,0.77,Uruguay,"Uruguay, England",left,173,72,no
+M. Villar,Cerro,LCB,24,0,2026-12-31,28,2431,0,0.29,Argentina,Argentina,left,192,86,yes
+S. Fernández,Danubio,CF,40,25000,,36,2427,9,6.58,Uruguay,"Uruguay, Spain",right,171,69,no
+M. Gómez,Miramar Misiones,"RWB, RB",33,200000,,31,2424,2,1.88,Uruguay,Uruguay,right,178,70,no
+G. Bueno,Racing,"CB, RCB",40,10000,,29,2411,0,0.45,Uruguay,"Uruguay, Italy",right,183,74,no
+N. Furtado,Defensor Sporting,RB,27,750000,,28,2405,1,0.56,Uruguay,Uruguay,right,168,63,no
+G. Trasante,Progreso,RB,26,200000,2025-12-31,32,2403,0,0.71,Uruguay,Uruguay,right,177,79,no
+N. Fernández,Progreso,"LW, AMF, RW",22,0,2026-12-31,35,2402,4,3.32,Uruguay,Uruguay,,0,0,no
+J. Ramos,Plaza Colonia,LB,29,650000,,30,2399,1,1.91,Uruguay,"Uruguay, Italy",left,179,72,no
+S. Romero,Danubio,"RCMF, LCMF, DMF",35,200000,,30,2394,3,2.08,Uruguay,Uruguay,right,174,71,no
+A. Garcia,Wanderers,RB,26,0,2025-12-31,29,2383,1,1.72,Uruguay,Uruguay,right,178,0,no
+P. López,Miramar Misiones,"LCB, LB",23,0,2025-12-31,29,2376,3,2.05,Uruguay,Uruguay,left,179,82,no
+F. Pizzichillo,Torque,"RB, RCMF",29,500000,,31,2359,1,2.01,Uruguay,"Uruguay, Italy",right,177,70,no
+E. Redín,Plaza Colonia,RB,30,325000,,30,2339,0,0.04,Uruguay,Uruguay,right,182,78,no
+E. Busquets,Torque,"RB, LB",25,325000,,29,2335,3,1.56,Uruguay,"Uruguay, Italy",right,173,69,no
+S. da Silva,Miramar Misiones,CF,23,0,2027-12-31,31,2331,6,6.92,Uruguay,Uruguay,right,181,74,no
+A. Vera,River Plate,"AMF, RCMF, LW",21,0,2025-12-31,33,2300,3,3.82,Uruguay,Uruguay,left,175,67,no
+A. Anello,Boston River,"LW, LAMF, LWF",23,0,2027-06-30,34,2294,9,8.23,United States,"United States, Italy",right,182,77,no
+E. Remedi,Peñarol,"RDMF, LDMF, RCMF",30,1300000,2026-12-31,31,2294,1,0.71,Argentina,"Argentina, United States",right,170,71,no
+L. Carrizo,Plaza Colonia,"LW, CF, LAMF",22,0,2025-12-31,33,2278,2,5.25,Uruguay,Uruguay,right,0,0,no
+F. de León,River Plate,"RW, RAMF",21,0,2025-12-31,31,2262,1,4.13,Uruguay,Uruguay,right,177,0,no
+S. Cáceres,Cerro,"RCMF, RW, AMF",25,250000,,30,2250,2,1.51,Uruguay,Uruguay,right,178,67,no
+M. Acosta Fernández,Wanderers,"RCB, RB",22,0,2026-12-31,28,2229,1,0.92,Uruguay,Uruguay,,0,0,no
+D. Morosini,Juventud,RCB,21,0,2027-12-31,27,2226,1,0.89,Uruguay,Uruguay,,0,0,no
+Ó. Díaz,Miramar Misiones,"LCMF, RCMF, DMF",22,0,2025-12-31,27,2221,1,1.51,Uruguay,Uruguay,right,0,0,no
+E. Obregón,Torque,"RWF, RW, RAMF",24,500000,2027-12-31,32,2209,2,3.41,Argentina,Argentina,right,177,69,no
+A. Frugone,Cerro,LB,20,0,2025-12-31,28,2205,0,0.09,Uruguay,Uruguay,unknown,0,0,no
+M. Lorenzi Gómez,Plaza Colonia,RCB,24,0,2025-12-31,28,2192,2,2.19,Uruguay,Uruguay,right,178,0,no
+L. Sosa,Danubio,"LB, LCMF",34,250000,,28,2160,0,0.19,Uruguay,"Uruguay, Italy",left,177,68,no
+S. Núñez,Danubio,"CF, LW",25,550000,2027-07-31,36,2155,5,6.49,Uruguay,Uruguay,right,177,75,yes
+E. Ancheta,Nacional,RB,26,0,2027-12-31,27,2148,1,0.45,Uruguay,Uruguay,right,179,68,no
+L. Rodríguez,Nacional,"RCMF, LCMF, DMF",32,475000,,28,2147,0,0.71,Uruguay,Uruguay,right,170,62,no
+A. García,Progreso,"RCMF, LCMF",25,0,2025-12-31,29,2133,0,2.07,Uruguay,Uruguay,unknown,0,0,no
+M. Añasco,Cerro Largo,"LW, LAMF, RW",24,0,2026-07-31,34,2123,4,2.46,Uruguay,Uruguay,left,174,67,no
+F. Cerro,Wanderers,"LCMF, DMF, RCMF",37,100000,,29,2120,0,0.34,Argentina,Argentina,right,179,71,no
+E. Castillo,Liverpool,"LCB, LB",24,550000,2025-12-31,29,2118,0,0.42,Uruguay,Uruguay,left,171,65,no
+F. Tinaglini,Panserraikos,GK,26,300000,2027-06-30,21,2090,0,0,Uruguay,Uruguay,left,190,78,no
+F. Píriz,Plaza Colonia,"LCMF, DMF, LDMF",35,125000,,30,2086,0,0.58,Uruguay,"Uruguay, Italy",right,187,81,no
+L. Villalba,Nacional,"RW, RAMF",24,0,2028-07-31,36,2079,4,6.42,Uruguay,"Uruguay, Italy",right,182,0,no
+S. Rodríguez,Universidad de Chile,"LCMF, LDMF, AMF",33,1200000,2025-12-31,21,2076,5,4.63,Uruguay,"Uruguay, Spain",right,181,79,no
+F. Rossi,Cerro Largo,CF,23,0,2026-12-31,31,2073,10,9.22,Uruguay,Uruguay,unknown,179,0,no
+M. Amaro,Defensor Sporting,"RCMF, LCMF, RDMF",20,0,2028-12-31,31,2064,0,1.53,Uruguay,Uruguay,,0,0,no
+M. Silveira,Junior,GK,25,1000000,2026-07-31,21,2063,0,0,Uruguay,Uruguay,right,187,89,no
+T. Espinosa,Racing,"LWB, LB",21,0,2026-12-31,27,2045,3,2.19,Uruguay,Uruguay,left,162,57,no
+E. Agüero,Torque,"RCB, RB",21,0,2027-12-31,26,2030,0,1.24,Uruguay,Uruguay,unknown,187,73,no
+L. Femia,Danubio,"LW, RW, LAMF",23,0,2025-12-31,34,2015,2,4.15,Uruguay,Uruguay,right,173,0,no
+S. Figueredo,Leganés,"RWB, RB",24,0,2028-06-30,21,2001,0,1.39,Uruguay,Uruguay,right,180,71,no
+L. Agazzi,Defensor Sporting,"RW, RB, RAMF",20,0,2026-12-31,25,2001,5,4.11,Uruguay,"Uruguay, Italy",right,180,76,no
+D. Olivera,Miramar Misiones,"RW, RDMF, RWF",26,200000,,26,1990,6,2.76,Uruguay,Uruguay,right,186,76,no
+M. Peralta,Danubio,"LCMF, CF",19,0,2025-12-31,31,1989,2,1.92,Uruguay,Uruguay,right,174,66,no
+J. Quintana,River Plate,"RB, RW",25,350000,,27,1980,1,0.61,Uruguay,Uruguay,right,176,73,no
+H. Quintana,Olimpia,"RCMF, LCMF",24,0,,22,1978,6,3.35,Paraguay,Paraguay,right,175,70,no
+L. Correa,Cerro Largo,"RB, RDMF, DMF",29,350000,,26,1972,1,0.92,Uruguay,"Uruguay, Italy",right,180,76,no
+M. Gianoli,Cerro Largo,LCB,25,0,2025-12-31,23,1946,0,1.15,Uruguay,Uruguay,left,197,84,yes
+E. Álvarez,Unión Santa Fe,"RB, RW",24,0,2026-06-30,21,1943,2,0.81,Uruguay,Uruguay,right,175,0,no
+I. Yepez,Miramar Misiones,"CF, LW, LAMF",27,450000,2025-12-31,27,1933,0,3.25,Colombia,Colombia,,0,0,no
+M. Rodríguez,Unión Santa Fe,LCB,22,0,2028-12-31,20,1933,3,1.39,Uruguay,Uruguay,,0,0,no
+R. Brazionis,Racing,"CB, RCB",23,0,2027-12-31,21,1931,0,2.38,Uruguay,Uruguay,right,185,71,no
+P. Pacífico,Defensor Sporting,"LB, LCB",19,0,2028-12-31,24,1919,2,1.73,Uruguay,"Uruguay, Italy",left,187,0,no
+A. Miranda,Cerro,"LCMF, RCMF, LDMF",32,200000,,33,1917,1,1.22,Uruguay,Uruguay,right,178,74,no
+B. Barcia,Boston River,"RAMF, RW, RWF",24,800000,,29,1915,2,1.04,Uruguay,Uruguay,right,182,76,yes
+B. Tomatis,Racing,"CF, RWF, LWF",21,10000,,29,1902,4,4.47,Argentina,Argentina,right,177,65,yes
+E. Jourdan,River Plate,"LCMF, LDMF, DMF",21,0,2026-12-31,28,1900,0,0.19,Uruguay,Uruguay,unknown,178,63,no
+M. Gómez,Boston River,"RCB, LCB",20,0,2025-12-31,23,1898,1,0.54,Uruguay,Uruguay,right,191,0,no
+M. Rivero,Boston River,"LCB, RCB",21,0,2028-12-31,20,1883,1,1.52,Uruguay,Uruguay,,0,0,no
+G. Bortagaray,Boston River,LCB,25,175000,,19,1862,1,0.75,Uruguay,"Uruguay, Italy",left,184,75,no
+E. Crespo,River Plate,RCB,29,250000,,23,1845,0,0.47,Uruguay,Uruguay,right,187,86,no
+S. Costa,Torque,"LAMF, LCMF, LW",25,0,2025-12-31,31,1844,0,2.11,Uruguay,Uruguay,left,180,74,no
+C. Barros,Plaza Colonia,"LW, CF",25,300000,,33,1842,3,3.55,Uruguay,Uruguay,right,168,62,no
+N. Ramos,Unión Magdalena,"RCB, CB",26,200000,,19,1837,0,0.49,Uruguay,Uruguay,right,184,82,no
+S. Otegui,Plaza Colonia,"LB, LW",22,0,,23,1828,1,0.94,Uruguay,Uruguay,,0,0,no
+I. López,River Plate,CF,20,0,,30,1821,4,4.86,Italy,"Italy, Uruguay",,0,0,no
+E. Cuello,Cerro,"LW, LB, LAMF",31,250000,,29,1818,2,1.64,Uruguay,Uruguay,left,182,72,no
+E. García,Wanderers,"CB, RCB",35,200000,,20,1810,0,0.22,Uruguay,"Uruguay, Spain",right,186,84,no
+M. Alfonso,River Plate,"LCMF, RCMF, LDMF",25,0,2025-12-31,26,1806,0,0.05,Uruguay,Uruguay,left,172,76,no
+R. Rabino,Danubio,LB,27,350000,,23,1804,0,0.42,Uruguay,Uruguay,left,176,65,no
+D. Guzmán,Torque,"LCMF, RAMF, RW",19,0,,33,1798,4,1.74,Argentina,Argentina,,176,0,no
+G. Barrios,Defensor Sporting,"RCMF, LCMF",21,0,2025-12-31,24,1785,1,1.2,Uruguay,Uruguay,right,182,0,no
+J. Moreno,Miramar Misiones,GK,26,0,,18,1777,0,0,Colombia,Colombia,right,194,92,no
+D. García,Peñarol,"LAMF, LW",28,1000000,,35,1771,4,3.42,Uruguay,Uruguay,right,170,67,no
+C. Ebere,Nacional,CF,27,1300000,2026-12-31,30,1734,2,3.32,Nigeria,Nigeria,right,180,69,no
+A. Albarracín,Boston River,"AMF, LCMF",20,0,2027-12-31,28,1699,9,5.71,Uruguay,Uruguay,left,174,0,no
+M. Campaña,Peñarol,GK,36,400000,,17,1695,0,0,Uruguay,"Uruguay, Italy",right,185,75,no
+M. González,Boston River,RCB,31,200000,,19,1695,1,0.96,Uruguay,Uruguay,right,186,76,no
+D. Romero,Nacional,LB,25,450000,,22,1693,0,0.57,United States,"United States, Uruguay",left,181,79,yes
+N. Ferreira,Remo,"CF, RW, RWF",23,0,2027-06-30,22,1692,1,2.92,Uruguay,Uruguay,right,170,68,yes
+F. Perez,Juventud,RCMF,25,0,2025-12-31,29,1686,0,0.9,Uruguay,Uruguay,,0,0,no
+C. Mayada,Danubio,"RB, RCMF",34,250000,2025-12-31,19,1680,2,1.4,Uruguay,"Uruguay, Argentina",right,174,73,no
+F. Cairus,Racing,"DMF, LCMF, RCMF",25,0,2026-12-31,23,1680,0,0.51,Uruguay,Uruguay,right,177,72,no
+A. Cayetano,Liverpool,LB,26,600000,2026-12-31,22,1663,0,1.17,Uruguay,Uruguay,left,179,70,no
+N. Bertocchi,Cerro Largo,"LCMF, RCMF, DMF",36,100000,,25,1651,5,3.65,Argentina,"Argentina, Italy",right,190,78,no
+B. Larregui,Tolima,CF,24,0,2026-12-31,22,1637,4,6.18,Uruguay,Uruguay,unknown,182,0,yes
+P. Lima,Wanderers,RCB,33,175000,,18,1629,1,1.14,Uruguay,Uruguay,right,182,73,no
+M. Fernández,Gil Vicente,"RCMF, AMF, LCMF",22,300000,2025-12-31,20,1624,2,1.17,Uruguay,Uruguay,left,171,70,yes
+B. Veglio,Wanderers,"RCMF, RW",27,400000,,29,1622,2,2.96,Uruguay,Uruguay,right,164,62,no
+F. Silvera,Miramar Misiones,"RW, RAMF, RWB",23,150000,,29,1604,1,0.72,Uruguay,Uruguay,left,172,69,no
+L. Acosta,Liverpool,"RCMF, AMF",23,0,,32,1594,5,2.43,Uruguay,Uruguay,right,176,69,no
+A. Moreira,Gil Vicente,"RW, RAMF, CF",24,0,2026-12-31,19,1593,3,2.6,Uruguay,Uruguay,right,0,0,yes
+B. Cortés,Peñarol,GK,30,3000000,2027-12-31,16,1592,0,0,Chile,Chile,right,186,90,yes
+F. Pérez,River Plate U20,"RCB, LCB",22,0,2025-12-31,18,1588,0,0.28,Uruguay,Uruguay,,0,0,no
+M. Argüello,Danubio,RB,23,0,2025-12-31,21,1585,0,0.19,Uruguay,Uruguay,right,178,72,no
+M. Cáceres,Talleres Córdoba,"RCMF, LCMF",23,0,2028-12-31,18,1580,2,0.64,Argentina,Argentina,right,170,63,no
+M. Suárez,Wanderers,"LCMF, AMF, RCMF",21,350000,,25,1569,1,1.03,Uruguay,Uruguay,right,179,70,no
+H. Carroso,Progreso,RCB,19,0,,22,1567,0,0.72,Uruguay,Uruguay,,0,0,no
+Rómulo Otero,Nacional,"LW, RW, LAMF",33,800000,,29,1565,4,2.45,Venezuela,Venezuela,right,166,70,no
+L. Pertusatti,River Plate,RB,24,200000,,18,1543,0,0.04,Uruguay,Uruguay,right,181,0,no
+G. Báez,Talleres Córdoba,LB,30,1300000,2025-12-31,18,1541,3,0.94,Argentina,"Argentina, Paraguay",left,178,74,no
+P. García,San Martín San Juan,"RW, RAMF, RCMF",26,400000,,21,1517,0,2.12,Uruguay,Uruguay,right,178,66,no
+A. Cougo,Progreso,LB,29,300000,2025-12-31,22,1514,1,1.02,Uruguay,Uruguay,left,181,73,no
+M. Mir,Liverpool,"RW, RAMF, RCMF",22,0,2028-12-31,26,1501,4,2.75,Spain,"Spain, Uruguay",right,184,76,no
+M. Abaldo,Independiente,"CF, LW, RAMF",21,0,2027-12-31,19,1492,3,3.19,Uruguay,"Uruguay, Germany",right,172,60,yes
+A. Macelli,Cerro,"RCB, DMF, RCMF",27,0,2025-12-31,15,1488,1,0.92,Argentina,Argentina,right,178,70,no
+J. Cabrera,Peñarol,"RAMF, RW",33,700000,,22,1485,4,2.07,Uruguay,Uruguay,right,173,68,no
+L. Giossa,San Antonio Bulo Bulo,GK,25,300000,,15,1484,0,0,Uruguay,Uruguay,right,179,72,no
+G. Silva,Progreso,"RCMF, LCMF",26,0,2025-12-31,26,1478,1,1.17,Argentina,Argentina,right,173,71,no
+T. Correa,River Plate,CF,21,0,2025-12-31,30,1472,1,4.93,Spain,"Spain, Uruguay",,175,75,no
+R. Bacchia,Cerro,GK,26,500000,2026-12-31,15,1464,0,0,Uruguay,"Uruguay, Italy",right,185,80,yes
+F. Torgnascioli,Torque,GK,35,450000,2025-12-31,15,1458,0,0,Uruguay,"Uruguay, Italy",right,188,78,no
+J. da Silva,Wanderers,GK,34,150000,,15,1456,0,0,Uruguay,Uruguay,right,181,74,no
+R. Haller,Boston River,RB,25,500000,2026-12-31,23,1447,0,0.11,Uruguay,Uruguay,right,178,79,yes
+A. Sosa,Miramar Misiones,"LWB, LB, LW",29,150000,2025-12-31,22,1426,0,0.25,Uruguay,Uruguay,left,177,71,no
+V. Gauthier,León,RCB,22,0,2029-06-30,15,1422,2,0.58,Uruguay,Uruguay,right,191,88,no
+F. Parada,Cerro Largo,"LCB, RCB",25,200000,,22,1421,0,0.33,Uruguay,Uruguay,left,190,83,no
+Diogo de Oliveira,Paysandu,CF,28,500000,,16,1413,5,3.27,Brazil,Brazil,right,194,79,no
+G. Pereira,Miramar Misiones,"DMF, LDMF, LCMF",34,150000,,18,1412,0,0.03,Uruguay,Uruguay,right,181,83,no
+F. Bregante,Liverpool,LB,21,0,2027-08-30,21,1411,0,0.09,Uruguay,Uruguay,left,179,72,no
+R. Chagas,Juventud,"RCMF, RW, RAMF",22,0,2025-12-31,23,1403,3,2.22,Uruguay,Uruguay,right,176,66,no
+M. Villa,Atlético Tucumán,"RB, RCB",28,400000,,15,1385,1,0.41,Uruguay,"Uruguay, Italy",right,184,76,no
+M. Ocampo,Cerro,"AMF, RW, LW",23,700000,,26,1383,0,1.5,Uruguay,Uruguay,right,180,75,no
+M. Cubero,Cerro,GK,31,150000,,15,1377,0,0,Uruguay,Uruguay,right,188,90,no
+J. Bosca Fraquelli,Racing,"RCMF, LCMF",20,0,,25,1367,0,0.93,Uruguay,Uruguay,unknown,0,0,no
+G. Fratta,Torque,"RCB, LCB",30,500000,,19,1349,2,1.61,Uruguay,Uruguay,right,188,78,no
+W. Montoya,Godoy Cruz,"AMF, CF, LAMF",32,300000,,19,1341,5,3.15,Argentina,Argentina,right,173,72,no
+R. Rivero,Wanderers,"LWF, RW, LW",29,500000,,19,1335,5,4.77,Uruguay,Uruguay,left,170,69,no
+H. Salaberry,Cerro,RCB,38,25000,2025-12-31,16,1330,0,0.52,Uruguay,"Uruguay, Ecuador",right,181,76,no
+M. Redín,Plaza Colonia,"RW, RB",22,0,,32,1326,1,1.33,Uruguay,Uruguay,,0,0,no
+M. Perg,Danubio,"RCB, LCB, CB",34,200000,,18,1325,0,0.29,Uruguay,Uruguay,right,185,77,no
+Nacho Pais,Danubio,"LCMF, DMF, LDMF",25,150000,2027-06-30,14,1321,0,0.67,Argentina,"Argentina, Spain",right,175,61,no
+A. Pandiani Quaglia,Miramar Misiones,"LCMF, AMF",25,0,,23,1309,1,0.73,Spain,"Spain, Uruguay",,0,0,no
+F. Alonso,Miramar Misiones,"LCB, CB",34,250000,,20,1303,0,0.65,Uruguay,Uruguay,right,186,78,no
+N. Queiroz,Wanderers,"LCMF, RCMF",29,300000,,25,1301,2,0.57,Uruguay,Uruguay,right,179,69,no
+J. Trindade,Peñarol,"DMF, LDMF, RCMF",32,0,2027-06-30,16,1285,0,0.28,Uruguay,Uruguay,right,176,74,no
+L. Umpierrez,Peñarol U20,"LAMF, LCMF, RAMF",21,0,,26,1277,0,0.74,Uruguay,Uruguay,unknown,0,0,no
+F. Silvestre,Cerro,"LCMF, DMF, RDMF",24,50000,2025-12-31,20,1269,1,1.55,Uruguay,Uruguay,right,184,80,no
+F. Avenatti,Boston River,CF,32,500000,2025-12-31,21,1262,5,4.03,Uruguay,"Uruguay, Italy",left,197,86,no
+M. Velázquez,Plaza Colonia,"RCB, LCB",33,200000,,16,1257,1,0.82,Uruguay,Uruguay,right,182,78,no
+N. Cabral,Liverpool,LCB,26,250000,,15,1242,0,0.43,Argentina,Argentina,left,188,83,no
+C. González,Cerro Largo,"LB, LW, LAMF",26,300000,,19,1240,0,0.49,Uruguay,Uruguay,,0,0,no
+M. Copelotti,Progreso,CF,21,0,,22,1236,3,2.96,Uruguay,Uruguay,right,189,0,no
+L. López,Lommel SK,"DMF, RCMF, RDMF",20,0,,17,1234,0,0.07,Argentina,Argentina,right,185,0,yes
+Léo Coelho,Amazonas,"LCB, RCB",32,800000,2025-12-31,16,1226,0,0.93,Brazil,"Brazil, Uruguay",right,190,86,no
+N. González,Unión Comercio,CF,28,300000,,17,1208,3,4.97,Uruguay,Uruguay,right,183,81,no
+M. Abero,Cerro,"LB, LCB",35,150000,,13,1201,4,2.83,Uruguay,"Uruguay, Italy",left,184,81,no
+L. Monzón,Junior,"CB, LCB",23,800000,,12,1197,1,0.38,Brazil,"Brazil, Uruguay",left,185,78,yes
+I. Pintos,Danubio,"RCMF, RB",21,0,,18,1195,0,0.6,Uruguay,Uruguay,right,179,68,no
+A. Pérez,Cerro Largo,"LCMF, RCMF, DMF",25,350000,,26,1189,1,1.58,Uruguay,Uruguay,right,181,71,no
+D. Núñez,Miramar Misiones,"RCMF, DMF, LCMF",23,0,,21,1180,1,0.84,Uruguay,Uruguay,unknown,182,0,no
+J. Recoba,Las Palmas,"LAMF, LW, RW",22,0,2028-06-30,22,1180,4,3.06,Italy,"Italy, Uruguay",right,176,67,no
+M. Alonso,San Antonio Bulo Bulo,"LW, RW, RAMF",23,200000,,18,1177,3,2.67,Uruguay,Uruguay,left,179,74,no
+L. Lemos,River Plate,"RCMF, DMF, RDMF",25,550000,,17,1164,0,0.17,Uruguay,Uruguay,right,183,75,yes
+Matías Arezo,Peñarol,CF,23,7000000,2028-12-31,17,1164,8,5.44,Uruguay,Uruguay,right,180,70,yes
+I. Lemmo,Progreso,"LAMF, LW, AMF",35,200000,,14,1163,5,4.51,Uruguay,"Uruguay, Italy",left,171,70,no
+N. Fuica,Cerro,"LCB, RCB, RB",21,0,,13,1158,0,0.46,Uruguay,Uruguay,,0,0,no
+X. Biscayzacú,Defensor Sporting,"CF, AMF, RW",20,0,2025-12-31,30,1153,4,2.72,Mexico,"Mexico, Uruguay",unknown,164,55,no
+G. Martínez,Juventud,LCB,22,0,2026-12-31,14,1152,1,0.38,Colombia,Colombia,right,0,0,no
+J. Zeballos,Wanderers,CF,29,250000,,20,1147,2,5.3,Uruguay,Uruguay,right,177,76,no
+A. Machado,Defensor Sporting,"CF, LW, LAMF",23,375000,2025-12-31,24,1139,2,2.71,Uruguay,Uruguay,left,179,77,yes
+L. Morales,Olimpia,RB,25,400000,,15,1137,1,2.09,Uruguay,Uruguay,right,183,78,yes
+F. Muñoa,Boston River,"LCMF, AMF",21,0,2025-12-31,26,1133,2,1.52,Uruguay,Uruguay,,0,0,no
+Alex Bruno,Plaza Colonia,CF,26,0,2026-12-31,27,1125,1,2.4,Brazil,Brazil,left,190,83,no
+Á. Cayetano,Plaza Colonia,"LCB, CB, RCB",34,250000,,19,1114,0,0.02,Uruguay,Uruguay,right,189,89,no
+R. Pérez,Olimpia,"RCMF, LCMF, RDMF",29,475000,2026-12-31,15,1102,0,1.09,Uruguay,"Uruguay, Italy",right,181,74,no
+L. Otormín,Juventud,"CF, AMF",29,300000,,19,1097,3,2.76,Uruguay,Uruguay,right,172,70,no
+D. Terans,Peñarol,"CF, LAMF, AMF",31,4000000,2026-12-31,22,1090,3,4.56,Uruguay,Uruguay,left,176,71,no
+F. Cabrera,River Plate,LB,21,0,,14,1084,0,0.88,Uruguay,Uruguay,,0,0,no
+N. da Silva,Torque,CF,20,0,2030-12-31,27,1083,3,6.13,Uruguay,"Uruguay, Brazil",unknown,182,0,no
+F. González,Racing,"RB, RWB",20,0,,19,1079,1,1.29,Uruguay,Uruguay,right,0,0,no
+F. Peraza,Magallanes,CF,33,0,2026-12-31,19,1078,1,2.09,Uruguay,Uruguay,right,184,78,no
+D. Frascarelli,River Plate,GK,40,10000,,11,1076,0,0,Uruguay,"Uruguay, Ecuador",right,182,82,no
+S. Sosa,Everton,CF,31,300000,2025-12-31,13,1074,6,5.57,Uruguay,Uruguay,right,186,79,yes
+F. López,Progreso,"CF, RAMF, RWF",33,400000,,14,1064,5,2.61,Uruguay,Uruguay,right,172,71,no
+M. Brasil,Cerro Largo,RCB,26,1400000,,15,1064,1,1.44,Uruguay,Uruguay,right,180,73,no
+A. Ocampo,Plaza Colonia,"RW, LW, CF",28,1200000,,28,1052,2,2.35,Uruguay,Uruguay,left,172,72,yes
+J. Fernández,Danubio,"LW, RW, LB",22,0,,24,1040,1,1.59,Uruguay,Uruguay,left,174,66,no
+K. Prieto,Casa Pia AC,"RB, RW",22,0,,16,1036,1,0.2,Uruguay,Uruguay,right,184,69,no
+G. Gabriel,Wanderers,"LB, LWB",31,250000,,12,1022,0,0.59,Uruguay,Uruguay,left,182,0,yes
+J. O'Neill,Boston River,"LB, LWB",24,0,,18,1016,0,0.36,Uruguay,Uruguay,left,169,70,no
+J. Gutiérrez,Defensa y Justicia,"CF, LW",23,650000,,15,1010,4,3.96,Uruguay,"Uruguay, Italy",right,177,68,yes
+Y. Rodríguez,Racing,"DMF, LCMF, RCMF",32,375000,2025-12-31,18,1009,0,0.2,Uruguay,Uruguay,right,175,72,yes
+S. Ramírez,Racing,"AMF, LW, LCMF",27,250000,,20,1001,2,2.36,Uruguay,Uruguay,right,175,0,no
+A. Pereira,Racing,"RWB, RB, RCB",24,0,,14,999,4,2.47,Uruguay,Uruguay,right,172,66,no
+A. Soría,Al Sadd,"RCMF, RDMF, RW",20,0,2030-06-30,13,994,1,1.3,Uruguay,Uruguay,right,175,66,no
+L. Hernández,Peñarol,LB,33,400000,,26,988,3,1.83,Uruguay,Uruguay,left,175,83,no
+J. Contrera,Sarmiento,"LW, RW, RWF",22,0,2027-12-31,16,980,1,3.4,Argentina,Argentina,right,0,0,yes
+A. González,Boston River,CF,23,300000,2026-12-31,21,980,1,3.23,Uruguay,Uruguay,right,182,73,no
+J. Rodríguez,Cagliari,"LCB, LB",20,0,,12,979,0,0.08,Uruguay,Uruguay,left,190,80,no
+F. Ginella,Defensor Sporting,"DMF, LCMF, RCMF",26,1000000,,16,977,0,0.27,Uruguay,"Uruguay, Italy",right,182,73,no
+A. López,Plaza Colonia,CF,27,100000,,11,974,4,1.22,Argentina,Argentina,right,195,0,no
+Diego Abreu,Defensor Sporting,CF,22,0,,29,973,7,6.84,Uruguay,"Uruguay, Italy",right,189,78,no
+M. Suárez,Cerro,"RB, LB",29,250000,,11,965,0,0.02,Uruguay,Uruguay,right,182,80,no
+J. Rivero,Progreso,"LW, LAMF, RW",26,0,,23,956,1,1.75,Uruguay,Uruguay,left,177,70,no
+M. Castro,Liverpool,"RWF, RW, RAMF",30,1500000,,16,954,1,2.38,Uruguay,Uruguay,right,175,73,no
+R. Machado,Liverpool,"CF, RW",20,0,,33,949,3,3.87,Uruguay,"Uruguay, Italy",right,177,73,no
+K. Parzajuk,Wanderers,CF,23,0,2027-12-31,13,945,0,2.55,Paraguay,"Paraguay, Poland",right,190,0,yes
+L. Vázquez,Cerro Largo,"RB, RW",19,0,,12,945,0,0.13,Uruguay,Uruguay,,0,0,no
+F. Catarozzi,Liverpool,"RCMF, DMF, RDMF",25,450000,,15,938,1,0.66,Uruguay,Uruguay,left,179,72,no
+Ignacio Neira,Cerro,"DMF, RCMF, LCMF",27,325000,,12,928,1,0.45,Uruguay,"Uruguay, Spain",right,182,74,no
+M. Paolini,Progreso,"RCB, CB",24,0,,10,927,0,0.41,Uruguay,"Uruguay, Italy",right,190,80,no
+F. Medina,Cerro Largo,"RW, RAMF",21,0,2025-12-31,21,927,0,0.76,Argentina,Argentina,,0,0,no
+G. López,Boston River,"RW, LAMF, LW",22,0,2025-12-31,22,922,2,1.87,Uruguay,Uruguay,right,176,68,yes
+J. Luna,Wanderers,"CF, AMF",20,0,2027-12-31,13,920,0,2.16,Argentina,Argentina,right,0,0,no
+G. Petit,Mirandés,CF,19,0,2026-12-31,17,917,6,3.08,Uruguay,Uruguay,right,189,78,yes
+G. Ramírez,Miramar Misiones,"RCMF, AMF, CF",34,175000,,20,915,3,1.82,Uruguay,Uruguay,left,178,83,no
+N. Leivas,Torque,LB,19,0,,14,914,1,0.9,Uruguay,Uruguay,left,182,0,no
+J. Báez,Peñarol,"LW, RAMF, LAMF",30,900000,,19,910,3,2.68,Uruguay,"Uruguay, Italy",right,178,74,no
+A. Barco,Emelec,"LCMF, DMF, LDMF",23,300000,,14,899,0,0.43,Peru,Peru,left,185,76,no
+G. Viera,Boston River,"RW, RAMF",25,100000,,28,898,2,1.32,Uruguay,Uruguay,right,176,73,no
+T. Olmos,River Plate,RB,20,0,2027-12-31,11,897,0,0.04,Argentina,Argentina,right,175,76,yes
+N. Rodríguez,Nacional,"RB, LB",34,450000,2025-12-31,15,892,1,0.44,Uruguay,Uruguay,right,183,79,no
+S. Camacho,Cerro,"CF, AMF",21,0,,19,874,0,1.21,Uruguay,Uruguay,unknown,0,0,no
+F. Sosa,Progreso,"CF, RAMF, RW",30,0,,26,871,1,2.24,Uruguay,Uruguay,right,190,0,no
+E. Sosa,Cerro,"RCMF, LDMF",27,350000,2025-12-31,15,866,1,0.27,Uruguay,Uruguay,right,176,76,no
+H. Vergara,Plaza Colonia,"RW, CF, RAMF",23,0,2026-12-31,12,854,1,0.99,Uruguay,Uruguay,right,180,71,no
+Rodrigo Pollero,River Plate,CF,29,350000,,10,846,5,3.86,Uruguay,Uruguay,right,185,85,no
+F. Soldano,Juventud,CF,31,325000,2025-12-31,12,845,0,1.7,Argentina,"Argentina, Italy",right,180,79,no
+E. Almeida,Cerro Largo,"CF, LW",20,0,2025-12-31,18,842,2,0.52,Uruguay,Uruguay,left,165,0,yes
+T. Rodríguez,Juventud,"RAMF, RW, AMF",29,250000,,24,840,0,0.6,Argentina,"Argentina, Chile",right,184,76,no
+Á. Vázquez,Racing,"LCMF, RCMF",23,375000,,12,837,0,0.2,Uruguay,Uruguay,left,175,68,no
+V. Adamo,RWD Molenbeek Res,CF,23,0,2026-12-31,17,831,1,3.04,Uruguay,Uruguay,right,193,82,no
+S. Paiva,Cerro,"CF, RW, RAMF",26,150000,,10,822,1,0.83,Uruguay,Uruguay,right,180,73,no
+R. Cabrera,River Plate,LB,21,0,,12,811,0,0.05,Uruguay,Uruguay,left,178,67,no
+P. Nongoy,Juventud,"RW, CF, LW",22,0,,12,803,1,0.55,Uruguay,Uruguay,right,177,80,no
+J. Aja,Juventud,"RCB, CB, LCB",32,400000,2025-12-31,15,800,1,0.79,Uruguay,Uruguay,right,191,84,no
+A. Severo,Racing U20,"CF, LWF, LW",20,0,,17,799,0,1.37,Uruguay,Uruguay,unknown,167,65,no
+I. Manzur,Racing,CF,20,0,,15,791,2,1.27,Argentina,Argentina,,0,0,no
+E. Forclaz,Liverpool,"RW, LAMF, LW",22,0,2026-12-31,25,789,0,0.79,Argentina,Argentina,right,175,67,no
+I. Suárez,Nacional,GK,23,400000,2025-12-31,9,789,0,0,Uruguay,"Uruguay, Italy",right,184,72,no
+E. Márquez,Liverpool,GK,23,0,2025-12-31,9,788,0,0,Uruguay,Uruguay,,0,0,no
+D. Herazo,San Lorenzo,CF,29,750000,2026-12-31,14,788,3,3.62,Colombia,Colombia,right,180,81,no
+S. Diana,Miramar Misiones,"LCB, LB",35,100000,,9,782,0,0.05,Uruguay,Uruguay,left,182,74,no
+L. de los Santos,Defensor Sporting,"DMF, RCMF, RDMF",24,0,2026-12-31,12,778,0,0.04,Uruguay,Uruguay,right,182,80,no
+M. Colmán,Progreso,"LCB, RCB, RB",26,0,,10,778,0,0.15,Uruguay,Uruguay,,0,0,no
+B. Ferrares,Cerro Largo,"RCB, LCB, RB",25,300000,2025-12-31,11,777,0,0.19,Uruguay,Uruguay,right,180,76,no
+N. Lodeiro,Nacional,"LAMF, LW, AMF",36,1200000,2025-12-31,13,776,0,1.08,Uruguay,"Uruguay, United States",left,173,69,no
+M. Risso,Danubio,"RCB, LCB",37,50000,,10,774,1,0.67,Uruguay,"Uruguay, Italy",right,193,87,no
+H. Silveira,Racing,CF,32,550000,,13,762,1,2.42,Uruguay,Uruguay,right,187,72,no
+S. Guerrero,Juventud,CF,25,400000,,10,761,1,1.98,Uruguay,Uruguay,right,172,67,no
+M. García,Cerro Largo,"LCMF, DMF",26,250000,,17,759,0,0.15,Uruguay,Uruguay,right,174,0,yes
+C. Sención,River Plate,"RCMF, LCMF",29,250000,,9,755,0,0.23,Uruguay,Uruguay,right,181,72,no
+I. Rodriguez,Juventud,"LCMF, LW, LWF",24,0,2025-12-31,21,750,1,0.84,Uruguay,Uruguay,unknown,0,0,no
+N. Royón,Rampla Juniors,CF,34,225000,,17,734,1,1.36,Uruguay,Uruguay,right,172,66,no
+C. Ordóñez,Progreso,"RCB, LCB, CB",23,250000,,9,727,0,0.11,Colombia,Colombia,right,186,79,yes
+N. Wunsch,Defensor Sporting,"RCMF, AMF",22,0,2026-12-31,18,716,1,0.63,Uruguay,Uruguay,right,174,59,no
+J. Rosso,Liverpool,LCB,28,450000,,8,713,0,0.04,Uruguay,Uruguay,right,178,75,no
+P. Calione,Nacional U20,"RCB, LCB",19,0,,11,698,0,0.24,Uruguay,Uruguay,right,186,80,no
+B. Hernández,Cerro Largo,"LW, RAMF, RW",21,0,2025-12-31,15,696,0,0.28,Uruguay,Uruguay,,171,0,no
+G. Montes,Torque,RCMF,30,1000000,2025-12-31,8,694,0,0.21,Uruguay,"Uruguay, Italy",left,174,74,yes
+M. Affonso,Juan Pablo II College,CF,33,150000,,14,692,1,1.54,Uruguay,Uruguay,left,192,75,no
+M. Moreira,River Plate,"LB, RB",31,350000,,10,686,0,0,Uruguay,Uruguay,left,173,68,no
+L. Camejo,River Plate,LB,19,0,,13,683,0,0.28,Uruguay,Uruguay,,0,0,no
+M. Rinaldi,Danubio,LCB,25,0,,7,671,1,0.43,Argentina,Argentina,unknown,0,0,no
+E. Crucci,Wanderers,CF,19,0,2026-12-31,14,667,2,1.29,Uruguay,Uruguay,unknown,0,0,no
+L. Andrade,Torque,"RW, LW, LAMF",18,0,,17,663,0,0.99,Argentina,Argentina,both,183,0,no
+P. López,Progreso,"CF, LW, AMF",29,400000,,20,662,0,0.58,Uruguay,Uruguay,right,169,65,no
+D. Bittencourt,Tacuarembó,CF,30,300000,2025-12-31,16,660,1,1.47,Brazil,Brazil,right,182,75,no
+M. Pereyra,Nacional,"RCMF, AMF, CF",35,500000,2025-12-31,23,648,0,0.47,Uruguay,"Uruguay, Italy",right,170,63,no
+E. Mereles,Nacional,"LW, LAMF, RW",20,0,,16,642,1,0.67,Uruguay,Uruguay,,0,0,no
+M. Viera,Rampla Juniors,"LW, LAMF",34,250000,,13,642,1,0.98,Uruguay,Uruguay,left,178,73,no
+D. Suárez,Peñarol,RB,37,650000,2025-12-31,12,636,0,0,Uruguay,"Uruguay, Spain",right,173,67,no
+E. Gularte,Peñarol,"RCB, LCB, RB",28,3500000,2027-06-30,11,630,1,2.25,Uruguay,Uruguay,right,188,80,yes
+D. Villalba,Plaza Colonia,"LCMF, RCMF",26,0,,22,626,0,0.13,Uruguay,Uruguay,right,178,71,no
+F. Rodríguez,Boston River,"CF, AMF",30,150000,,21,626,4,0.95,Uruguay,Uruguay,left,180,74,no
+F. Barone,Olimpia,CF,19,0,2025-12-31,15,624,3,3.38,Uruguay,Uruguay,right,190,77,no
+G. Borthagaray,Wanderers,"LCB, LB",19,0,,7,614,0,0,Uruguay,Uruguay,,0,0,no
+M. Boselli,Juventud,"CF, RWF, LAMF",31,125000,,22,613,0,1.68,Uruguay,"Uruguay, Spain",right,172,66,no
+A. Castro,Miramar Misiones,"LWB, LB",21,0,2025-12-31,8,603,0,0.29,Uruguay,Uruguay,unknown,0,0,no
+G. de Amores,Millonarios,GK,31,500000,2025-12-31,6,596,0,0,Uruguay,"Uruguay, Italy",right,190,76,no
+L. Navarro,Defensor Sporting,"CF, AMF",17,0,,12,592,0,3.05,Uruguay,Uruguay,right,183,72,no
+Y. Oyarzo Barragán,Racing U20,"LWB, LCMF, LWF",17,0,,13,588,0,0.35,Uruguay,Uruguay,,0,0,no
+V. Wurth,Plaza Colonia,RB,18,0,,7,586,0,0.01,Uruguay,Uruguay,,0,0,no
+A. Lopez,Plaza Colonia,CF,27,0,,7,585,3,0.68,Argentina,Argentina,,0,0,no
+I. López Pose,River Plate,"LCMF, AMF",21,0,,15,584,0,0.2,Italy,Italy,,177,0,no
+A. Velazquez,Danubio,"LW, LB",,0,,15,579,0,0.28,Argentina,Argentina,unknown,0,0,no
+L. Suárez,Liverpool,"LB, LCB",30,0,2026-12-31,12,579,0,0.5,Argentina,Argentina,left,187,81,yes
+A. Silva,La Luz,RB,32,375000,2025-12-31,8,574,0,0,Uruguay,Uruguay,right,174,76,no
+T. Viudez,Wanderers,"CF, AMF, RAMF",36,150000,,15,573,0,0.17,Uruguay,Uruguay,right,169,66,no
+A. Cambón,Defensor Sporting,CF,20,0,2025-12-31,15,551,1,1.22,Uruguay,Uruguay,right,187,76,no
+A. Rodríguez,Miramar Misiones,CF,21,0,,16,542,1,0.93,Uruguay,Uruguay,,174,75,no
+L. Pino García,Torque,"RW, RCMF, RAMF",20,0,2029-12-31,15,541,1,0.64,Uruguay,Uruguay,right,181,67,no
+G. Pérez,Monagas,"RCMF, RDMF, DMF",26,400000,,7,530,0,0.17,Uruguay,Uruguay,right,177,74,no
+E. Cardozo,Danubio,"LCMF, AMF, LWF",24,150000,,12,525,1,0.59,Argentina,"Argentina, Paraguay",right,167,59,yes
+G. Oroño,River Plate,"RCMF, RDMF, LCMF",20,0,,13,525,0,0.12,Uruguay,Uruguay,,0,0,no
+D. Gissi,River Plate,"RCB, CB",34,100000,,6,520,2,1.17,Switzerland,"Switzerland, Argentina",right,193,86,no
+J. Millán,Danubio,"DMF, RDMF",24,0,2025-12-31,7,513,1,1.11,United States,United States,,0,0,no
+B. Morales,Cerro,CF,20,0,2025-12-31,12,508,2,1.67,Uruguay,Uruguay,,0,0,no
+F. Chiappini,Boston River,"LCMF, LB",22,0,,12,507,1,0.15,Uruguay,Uruguay,,0,0,no
+F. Kidd,Progreso,"LB, LW",28,400000,2025-12-31,6,501,0,0.02,Uruguay,Uruguay,left,176,67,no
+S. Guzmán,Wanderers,"CF, RWF, LAMF",21,0,2025-12-31,14,497,0,0.33,Uruguay,Uruguay,,177,79,no
+J. Rodríguez,Wanderers U20,"CF, AMF, RWB",19,0,2025-12-31,17,493,1,1.47,Uruguay,Uruguay,both,0,0,no
+Y. Meité,Plaza Colonia,LCMF,21,0,,9,491,0,0.03,Côte d'Ivoire,Côte d'Ivoire,unknown,0,0,no
+K. Larrea,Cerrito,GK,29,125000,,5,490,0,0,Uruguay,Uruguay,right,186,74,no
+N. Gómez,Juventud,"LB, LW",25,0,,12,489,1,1.19,Uruguay,Uruguay,unknown,0,0,no
+H. Villalba,Peñarol,"CF, RW, RAMF",31,2500000,2025-12-31,16,488,3,1.72,Argentina,"Argentina, Paraguay",left,172,73,no
+F. Álvarez,Racing,"LCB, CB",21,0,,9,487,1,1.46,Argentina,Argentina,left,0,0,no
+B. Benítez,Llaneros,"RCMF, DMF, LCMF",29,175000,,6,486,0,0.04,Argentina,Argentina,right,175,73,no
+F. Suarez,Racing,"LW, LWF, RWF",22,0,,13,484,0,0.46,Uruguay,Uruguay,unknown,0,0,no
+D. Cheuquepal,Racing,"LWB, LB",18,0,,10,481,0,0.03,Argentina,Argentina,right,181,0,no
+J. Hernández Deleón,Plaza Colonia,LCB,18,0,,8,462,0,0.03,Uruguay,Uruguay,,0,0,no
+I. Valenzuela,Cerro,RB,24,25000,2025-12-31,7,459,0,0,Argentina,Argentina,right,181,76,no
+E. Olivera,Cerro Largo,"AMF, LCMF",21,0,2025-12-31,10,459,1,1.02,Uruguay,Uruguay,right,0,0,no
+M. Rodríguez,Cerrito,"LB, LCB",28,0,,6,455,0,0.04,Uruguay,Uruguay,left,180,74,no
+K. Arevalo Diaz,Montevideo City Torque U18,"LWF, LAMF, LW",19,0,,15,454,4,0.94,Uruguay,Uruguay,unknown,0,0,no
+G. Carneiro,Nacional,"CF, AMF",30,1400000,2026-12-31,13,453,1,0.54,Uruguay,Uruguay,left,195,85,no
+C. Sánchez Mechoso,Miramar Misiones,"RCMF, LCMF",22,0,,9,443,0,0.2,Uruguay,Uruguay,,0,0,no
+E. Vargas,Audax Italiano,"CF, LW",35,1000000,,12,440,2,1.52,Chile,Chile,right,174,77,no
+E. Fernández,Antigua GFC,"LB, LWB, LW",28,0,,7,421,0,0.04,Uruguay,Uruguay,,0,0,no
+V. Sánchez,Danubio,"LW, CF, AMF",23,0,,8,413,1,0.28,Argentina,Argentina,right,173,68,yes
+L. Maldonado,Atenas,"RCB, CB",40,10000,,6,412,2,0.58,Uruguay,Uruguay,right,184,78,no
+P. Suárez Marquez,Wanderers,"RW, LW, RWF",19,0,,11,412,0,0.24,Uruguay,Uruguay,right,178,73,no
+Brandão,Danubio,CF,21,0,2026-12-31,11,408,0,1.43,Brazil,Brazil,right,191,81,yes
+M. Pinela Borysiuk,Racing,"CB, LCB",20,0,,10,408,0,0.26,Uruguay,Uruguay,left,185,0,no
+F. Barrios,Boston River,"DMF, LCMF, LDMF",23,0,,7,408,0,0.03,Uruguay,Uruguay,right,181,72,no
+B. Kociubinski,Torque,"DMF, RDMF",24,300000,,13,407,0,0.02,Argentina,"Argentina, Italy",right,181,81,yes
+Gabriel Rossetto,Cerro Largo,"CF, RWF",25,0,,8,407,0,1.11,Brazil,Brazil,left,173,66,yes
+A. Mulet,Cerro,"LCMF, LDMF, RCMF",25,400000,2025-12-31,10,404,0,0.15,Argentina,Argentina,right,183,74,no
+L. Wasilewsky,Liverpool,"RCMF, RDMF, DMF",22,0,2028-10-11,18,404,0,0.13,Uruguay,Uruguay,left,166,63,no
+G. Silva,Progreso,"CF, AMF",21,0,,7,401,1,1.03,Uruguay,Uruguay,,0,0,no
+E. Hernández,Boston River,GK,40,0,,4,394,0,0,Uruguay,Uruguay,right,184,80,no
+G. Wagner,Wanderers,"LW, RCMF, AMF",23,150000,,9,388,0,0.84,Uruguay,"Uruguay, Germany",right,187,71,no
+M. Roldán,Miramar Misiones,"CF, LW, LWF",20,0,2027-12-31,8,372,0,0.18,Argentina,Argentina,right,181,0,yes
+A. Torterolo Del Arco,Defensor Sporting U19,"LW, CF, RWF",17,0,2025-12-31,9,371,0,0.22,Uruguay,Uruguay,unknown,173,65,no
+B. Arady,Nacional U20,"LW, RAMF, LAMF",18,0,,13,369,2,1.63,Uruguay,Uruguay,,172,69,no
+O. Falconis,Cerro,"LW, AMF, LAMF",25,300000,,12,364,0,0.12,Uruguay,Uruguay,left,170,68,no
+B. Acosta,Plaza Colonia,"RW, RAMF",19,0,2026-12-31,8,359,0,0.81,Argentina,Argentina,right,0,0,yes
+M. Martínez Doghram,Wanderers,"CF, LW",19,0,2027-09-01,10,353,0,0.59,,,right,171,63,no
+S. Mülhetaler,Peñarol,"RW, RAMF, RB",19,0,,9,326,0,0.24,Uruguay,Uruguay,right,168,60,no
+F. Dafonte,Rentistas,"DMF, RDMF",20,0,2025-12-31,5,325,0,0.04,Uruguay,Uruguay,right,187,0,yes
+M. Escobar,River Plate,"LW, LAMF, LWF",19,0,,7,325,0,0.33,Uruguay,Uruguay,,0,0,no
+P. Viudez,Racing,"CF, RW, LW",20,0,,7,323,0,0.15,Uruguay,Uruguay,right,169,60,no
+A. Prado,Juventud,LCB,23,200000,2025-12-31,4,320,0,0.49,Uruguay,Uruguay,left,185,76,no
+S. Milano,Liverpool,"RCB, LCB, CB",22,0,,4,315,1,0.11,Uruguay,Uruguay,right,183,0,no
+J. Patiño,Nacional,LB,27,400000,2027-12-31,7,314,0,0.62,Colombia,Colombia,left,183,82,no
+M. Alfonso,Unión San Felipe,"LCB, CF, CB",23,0,,5,307,0,0.36,Uruguay,Uruguay,left,188,79,no
+S. Corbo,Miramar Misiones,"RB, RCMF, RW",23,0,,4,304,0,0.09,Uruguay,Uruguay,right,173,0,no
+F. Triver,River Plate U20,"LCMF, LB",19,0,,7,304,0,0.02,Uruguay,Uruguay,right,0,0,no
+J. Moreno Córdoba,Miramar Misiones,GK,25,0,,3,298,0,0,Colombia,Colombia,,194,84,no
+G. Reyes,Plaza Colonia,GK,39,25000,,3,294,0,0,Uruguay,Uruguay,left,186,82,no
+M. Saravia,Defensor Sporting,"RCB, CB",26,450000,2026-07-31,9,288,0,0.03,Peru,Peru,right,187,84,no
+J. Varela,Racing,"RCMF, LCMF",37,50000,,5,287,0,0,Uruguay,Uruguay,right,178,77,no
+N. Suárez,La Luz,GK,25,400000,2025-12-31,3,286,0,0,Uruguay,Uruguay,left,183,75,no
+S. López,Miramar Misiones,"LWB, LCB, LB",20,0,,8,279,0,0.07,Uruguay,Uruguay,left,169,64,no
+M. Cachi,Fénix,AMF,27,375000,,8,276,0,0.49,Argentina,Argentina,left,166,68,no
+D. Asconeguy,Progreso,RB,39,25000,,10,272,0,0.04,Uruguay,Uruguay,right,177,75,no
+S. Pachamé,Plaza Colonia,"RCMF, RDMF",24,0,,4,271,0,0.01,Argentina,"Argentina, Spain",both,175,71,no
+F. Rodríguez,La Luz,CF,34,100000,,11,270,0,0.85,Uruguay,"Uruguay, Spain",left,185,75,no
+K. Altez,Huachipato,"RAMF, LCMF, LW",20,0,,7,262,0,0.44,Uruguay,Uruguay,right,165,60,yes
+M. Estol,River Plate U20,"RCMF, RDMF",30,200000,,4,262,0,0.84,Uruguay,Uruguay,right,179,73,no
+E. Darias,Peñarol,"LCMF, RCMF, LDMF",27,1200000,2027-12-31,3,254,1,0.83,Uruguay,Uruguay,right,172,70,no
+N. Schiappacasse,River Plate,"CF, LW, RAMF",26,250000,,7,254,0,0.26,Uruguay,"Uruguay, Italy",right,182,73,no
+M. Píriz,Cerro Largo,"RB, RWB, RCB",24,0,,5,253,0,0,Uruguay,Uruguay,right,0,0,no
+F. Techera,Cerro,CF,19,0,,8,252,1,0.58,Uruguay,Uruguay,right,180,67,no
+R. Dudok,Defensor Sporting,"LW, LAMF, LB",18,0,2025-12-31,9,252,0,0.13,Uruguay,Uruguay,left,170,58,no
+A. Romero,Boston River,"RCMF, LDMF, RDMF",22,375000,,4,250,0,0.12,Venezuela,Venezuela,right,184,71,no
+M. Izaguirre,Juventud,"RCMF, RDMF",22,0,,4,244,1,0.25,Uruguay,Uruguay,right,174,65,no
+N. Soria,Liverpool,"CF, RCMF",23,300000,,16,243,0,0.39,Uruguay,Uruguay,right,182,79,no
+E. Siri,Miramar Misiones,"CB, RCB",23,100000,,6,241,0,0,Uruguay,Uruguay,right,182,78,no
+A. Maidana,Plaza Colonia,"CF, RAMF",24,0,,6,238,0,0.14,Argentina,Argentina,right,0,0,no
+G. Nahuel,Miramar Misiones,"RW, CF, RWF",20,0,,6,234,0,0.37,Uruguay,Uruguay,,0,0,no
+N. Azambuja Vargas,Danubio U20,"CF, LAMF",17,0,,7,230,0,0.05,Uruguay,Uruguay,unknown,170,64,no
+I. Pérez,Cerro Largo,"CF, AMF",19,0,2025-12-31,5,229,1,0.57,Uruguay,Uruguay,right,182,75,no
+L. Sequeira,Cerro,"LW, RW, CF",21,0,,5,228,0,0.11,Uruguay,Uruguay,unknown,0,0,no
+R. Hernandez,Progreso,CF,20,0,,8,228,0,0.09,Uruguay,Uruguay,right,190,0,no
+B. Betancor,Cerro,CF,21,0,2025-12-31,4,227,0,0.26,Uruguay,Uruguay,right,188,0,yes
+B. Hurtado,Antofagasta,"CF, RCMF, LW",26,325000,2025-12-31,7,226,1,0.38,Venezuela,Venezuela,left,184,73,no
+N. Sosa,Racing,"CF, LW",29,375000,,3,220,0,1.2,Uruguay,Uruguay,right,176,70,no
+J. Pérez Tica,Delfin,CF,22,0,2025-12-31,5,218,0,0.09,Argentina,Argentina,right,169,76,yes
+F. Silveira,Torque,LB,21,0,,3,218,0,0,Uruguay,Uruguay,left,185,78,no
+J. Gallard,Cerro Largo,"CF, RW, RWF",21,0,,5,216,0,0.2,Argentina,Argentina,right,175,71,no
+J. Rodríguez,River Plate,"LCMF, DMF, RCMF",35,300000,,6,213,0,0.03,Argentina,Argentina,right,173,67,no
+J. Crisafi,Miramar Misiones,"CF, RWF",21,0,,10,209,0,0.47,Argentina,"Argentina, Italy",right,186,77,no
+M. Fonseca,Instituto,"CF, LW",24,500000,,5,208,0,0.28,Italy,"Italy, Uruguay",right,181,80,no
+N. Latorre,Miramar Misiones,"RCMF, RW",24,0,,3,206,0,0.13,Uruguay,Uruguay,unknown,0,0,no
+Freddy,Cerro Porteño,"CF, AMF",21,0,,11,203,2,0.58,Paraguay,Paraguay,unknown,0,0,no
+J. Amaro Mello,Danubio,"LCMF, RCMF, DMF",22,0,,7,203,0,0.03,Uruguay,Uruguay,right,178,0,yes
+Y. Irrazábal,Cerro,GK,37,25000,,2,202,0,0,Uruguay,Uruguay,right,181,81,no
+Luciano Inverso,Rentistas,"RW, RAMF",20,0,2025-12-31,4,202,0,0.2,Uruguay,"Uruguay, Italy",left,168,51,yes
+G. Silva,Peñarol,"RCB, LB, LCB",31,2000000,2025-12-31,5,201,0,0,Uruguay,"Uruguay, Italy",left,187,76,no
+M. De Los Santos,Progreso,"LCMF, LAMF, LDMF",27,225000,,7,200,0,0.05,Uruguay,Uruguay,right,176,71,no
+J. Jorge,Defensor Sporting,"AMF, LCMF, LW",21,0,2026-12-31,4,199,0,0.21,Uruguay,"Uruguay, Spain",both,177,70,no
+F. Acosta,Cerro,"LCMF, RDMF",20,0,,7,195,0,0,Uruguay,Uruguay,unknown,0,0,no
+N. Rossi,Juventud,GK,27,500000,,2,194,0,0,Uruguay,Uruguay,right,188,79,no
+R. Amaral,Oriente Petrolero,"CF, AMF, DMF",28,450000,,7,192,0,0.22,Uruguay,Uruguay,left,175,85,no
+F. Marcos,Miramar Misiones,GK,19,0,,2,191,0,0,Uruguay,Uruguay,,0,0,no
+E. Saliadarre,Miramar Misiones,"AMF, RW, LWF",23,0,,5,191,0,0.03,Argentina,Argentina,left,178,67,no
+E. Cuello,Cerro Largo,"LCMF, RCMF",20,0,2025-12-31,7,187,0,0.39,Uruguay,Uruguay,right,182,72,yes
+D. Rodríguez,Liverpool,"DMF, LDMF, RCMF",36,175000,,11,184,0,0,Uruguay,"Uruguay, Italy",right,170,65,no
+Anderson Rodriguez,Racing,CF,19,0,2025-12-31,6,176,0,0.23,Uruguay,Uruguay,right,0,0,no
+N. Campos,Central Español,CF,20,0,2025-12-31,4,174,0,0.19,Uruguay,Uruguay,left,0,0,no
+M. López,Danubio,"CF, RW",28,300000,,7,166,1,0.4,Argentina,Argentina,right,181,75,no
+J. Álvarez,Cerro,"LAMF, AMF, CF",29,1300000,,4,163,1,0.54,Argentina,"Argentina, Italy",right,178,72,no
+F. Vigo,Juventud,"CF, AMF, RCMF",26,250000,,9,162,0,0.14,Uruguay,Uruguay,left,185,75,no
+F. Cadenazzi,,CF,33,200000,,3,161,0,0.78,Argentina,Argentina,left,191,89,no
+J. Taran Baz,Torque,"RCB, RCMF",20,0,,6,161,0,0,Uruguay,Uruguay,unknown,0,0,no
+Nicolás Leguizamón,Deportivo Cuenca,"RWF, CF",30,100000,2025-12-31,4,161,1,1.83,Argentina,Argentina,right,181,73,no
+M. Nichele,Cerro,"CF, LCMF, AMF",25,100000,,5,158,0,0.12,Uruguay,Uruguay,left,183,73,no
+J. Poiso,Deportivo Maldonado,"RB, RCB",21,475000,,2,157,0,0.04,Uruguay,Uruguay,right,177,70,no
+A. Prieto,Progreso,RCB,,0,,2,156,0,0,Uruguay,Uruguay,,0,0,no
+A. dos Santos Álvez,Nacional,"RW, RAMF, LW",17,0,,4,155,0,0.1,Uruguay,Uruguay,right,167,55,no
+M. Traoré,Plaza Colonia,"RB, RW",21,0,,2,155,0,0,Côte d'Ivoire,Côte d'Ivoire,unknown,0,0,no
+L. Cosentino,Atlético GO,CF,24,0,,7,153,1,0.17,Uruguay,Uruguay,right,172,70,yes
+F. Tirado,Miramar Misiones,"LCMF, RCMF, LW",21,0,2026-12-31,6,152,0,0.04,Argentina,Argentina,right,175,70,yes
+H. Novick,,"RCMF, DMF, LDMF",36,100000,,4,146,0,0.36,Uruguay,Uruguay,right,174,68,no
+S. Mederos,Tacuary,"LDMF, RAMF, LCMF",27,350000,2025-12-31,5,145,0,0.47,Uruguay,Uruguay,left,172,70,no
+L. González,River Plate U19,"LB, LCB",20,0,,5,143,0,0.06,Uruguay,Uruguay,,0,0,no
+A. Aires,Cerro,"LCMF, RCMF, RDMF",21,100000,,6,141,0,0.06,Uruguay,Uruguay,right,178,78,no
+R. Sena Aguirre,Defensor Sporting U20,"LWF, LB, LAMF",21,0,,3,141,0,0.12,Uruguay,Uruguay,unknown,0,0,no
+R. Mederos,Racing,"RCMF, AMF, LAMF",20,0,,5,141,0,0,Uruguay,Uruguay,,0,0,yes
+B. Lozano,Defensor Sporting,"LAMF, LW, LDMF",31,0,,5,139,0,0.03,Uruguay,Uruguay,right,169,69,no
+F. Marchesini,Defensores Unidos,"LCB, RCB",25,0,2025-12-31,3,135,0,0,Argentina,Argentina,unknown,0,0,no
+D. Sánchez,River Plate,"LW, RW, RWF",23,0,,5,126,0,0.12,Uruguay,Uruguay,left,175,66,no
+C. Ortiz Cañellas,Miramar Misiones,"RB, RW, LW",23,0,,3,125,0,0,Uruguay,Uruguay,right,165,70,no
+T. López,Rentistas,"RCMF, LDMF",20,0,,2,119,0,0.22,Uruguay,Uruguay,right,0,0,yes
+J. Chavero,River Plate,"CF, RW",19,0,,4,118,0,0.33,Argentina,Argentina,,173,72,yes
+S. Rollano,Cerro Largo,CF,21,0,2026-07-31,2,111,0,0.93,Uruguay,Uruguay,,0,0,no
+F. Núñez,Liverpool,"LW, LAMF",19,150000,,2,111,0,0.02,Uruguay,Uruguay,right,172,70,no
+R. Sánchez,Juventud,"CF, LW",21,0,2025-12-31,3,110,0,0,Uruguay,Uruguay,right,170,64,yes
+A. Kahl,Racing,CF,21,0,,2,107,0,0.15,Argentina,Argentina,right,0,0,no
+N. Lopez,Progreso,"LAMF, RW, RWF",18,0,,4,103,1,0.55,Uruguay,Uruguay,left,174,62,no
+M. Cantera,Danubio,"AMF, CF",32,550000,,3,102,0,0.09,Uruguay,Uruguay,right,184,80,no
+M. Núñez,Cerro,"CF, RW",22,0,,3,99,0,0.39,Uruguay,Uruguay,unknown,0,0,no

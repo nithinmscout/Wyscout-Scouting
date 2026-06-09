@@ -1,6 +1,4 @@
 # helpers/transfermarkt_lineups.py
-
-from __future__ import annotations
 import re
 import time
 import requests

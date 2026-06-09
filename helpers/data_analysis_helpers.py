@@ -219,15 +219,15 @@ def build_position_cohort(
     df: pd.DataFrame,
     role: str,
     position_col: str = "Position",
-    fcm_role_col: str | None = None,
-    fcm_role_filter: Optional[List[str]] = None,
+    role_profile_col: str | None = None,
+    role_profile_filter: Optional[List[str]] = None,
     min_minutes: int = 300,
     age_max: Optional[int] = None,
     minutes_col: str = "Minutes played",
     age_col: str = "Age",
 ) -> pd.DataFrame:
     """
-    Generic filter for a position or FCM role cohort before we compute CFPI.
+    Generic filter for a position or Role profile cohort before we compute CFPI.
     """
 
     out = df.copy()
@@ -237,8 +237,8 @@ def build_position_cohort(
         mask_pos = out[position_col].fillna("").str.contains(role, na=False)
         out = out[mask_pos].copy()
 
-    if fcm_role_col and fcm_role_filter:
-        out = out[out[fcm_role_col].isin(fcm_role_filter)].copy()
+    if role_profile_col and role_profile_filter:
+        out = out[out[role_profile_col].isin(role_profile_filter)].copy()
 
     if minutes_col in out.columns:
         mins = _to_numeric(out[minutes_col])
@@ -256,8 +256,8 @@ def prepare_u21_position_frame(
     position_code: str,
     max_age: int = 21,
     min_minutes: int = 300,
-    fcm_roles: Optional[List[str]] = None,
-    fcm_role_col: str | None = None,
+    role_profiles: Optional[List[str]] = None,
+    role_profile_col: str | None = None,
     role_key_for_config: str = "CF",
     age_col: str = "Age",
     minutes_col: str = "Minutes played",
@@ -265,7 +265,7 @@ def prepare_u21_position_frame(
     """
     One stop helper for the U21 tab.
 
-    1. Filters master df to the chosen position and optional FCM roles
+    1. Filters master df to the chosen position and optional Role profiles
     2. Applies U21 and minutes filters
     3. Computes BPS, CFPI variants, and Emergence Index using the cohort
     """
@@ -274,8 +274,8 @@ def prepare_u21_position_frame(
         df_master,
         role=position_code,
         position_col="Position",
-        fcm_role_col=fcm_role_col,
-        fcm_role_filter=fcm_roles,
+        role_profile_col=role_profile_col,
+        role_profile_filter=role_profiles,
         min_minutes=min_minutes,
         age_max=max_age,
         minutes_col=minutes_col,
@@ -300,7 +300,7 @@ def render_u21_tab(
     st,
     df_master: pd.DataFrame,
     position_options: List[str],
-    fcm_role_options: List[str],
+    role_profile_options: List[str],
 ):
     """
     Streamlit UI for the U21 development view.
@@ -311,7 +311,7 @@ def render_u21_tab(
 
     col1, col2, col3 = st.columns(3)
     position_code = col1.selectbox("Position filter", position_options, index=0)
-    sel_roles = col2.multiselect("FCM roles (optional)", fcm_role_options, default=[])
+    sel_roles = col2.multiselect("Role profiles (optional)", role_profile_options, default=[])
     metric_choice = col3.selectbox(
         "Rank by metric",
         ["_emergence_index", "_cfpi_youth", "_cfpi_balanced", "_bps"],
@@ -329,15 +329,15 @@ def render_u21_tab(
     if st.button("Refresh U21 cohort"):
         st.experimental_rerun()
 
-    fcm_roles = sel_roles if sel_roles else None
+    role_profiles = sel_roles if sel_roles else None
 
     df_scored = prepare_u21_position_frame(
         df_master,
         position_code=position_code,
         max_age=max_age,
         min_minutes=min_minutes,
-        fcm_roles=fcm_roles,
-        fcm_role_col="_fcm_role_guess",  # you already create this in enrich_with_groups
+        role_profiles=role_profiles,
+        role_profile_col="_role_profile_guess",  # you already create this in enrich_with_groups
         role_key_for_config="CF",        # for now we use CF config, extend later
     )
 
@@ -358,7 +358,7 @@ def render_u21_tab(
         "Age",
         "Minutes played",
         "Position",
-        "_fcm_role_guess",
+        "_role_profile_guess",
         "_bps",
         "_cfpi_youth",
         "_cfpi_mature",
