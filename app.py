@@ -2243,18 +2243,7 @@ def add_or_update_row(df: pd.DataFrame, row: Dict[str, Any]) -> pd.DataFrame:
     return df
 
 def export_buttons(df_view: pd.DataFrame, key_suf: str = ""):
-    c1, c2 = st.columns(2)
-    c1.download_button("Download CSV", data=df_view.to_csv(index=False).encode("utf-8"),
-                       file_name=f"export{key_suf}.csv", mime="text/csv")
-    try:
-        with pd.ExcelWriter(io.BytesIO(), engine="xlsxwriter") as w:
-            df_view.to_excel(w, index=False, sheet_name="Sheet1")
-            data = w.book.filename.getvalue()  # type: ignore
-        c2.download_button("Download Excel", data=data,
-                           file_name=f"export{key_suf}.xlsx",
-                           mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-    except Exception:
-        st.caption("Install xlsxwriter for Excel export. CSV export always works.")
+    return None
 
 def _safe_unlink(path: str):
     try:
@@ -2437,7 +2426,7 @@ def profile_editor(df: pd.DataFrame, row_index: int) -> pd.DataFrame:
         cur = str(df.at[row_index, col]) if col in df.columns else ""
         note_vals[sname] = st.text_area(sname, value=cur, key=f"note_{row_index}_{sname}", height=120 if sname!="Conclusion" else 100)
 
-    if st.button("💾 Save profile", type="primary", key=f"save_profile_{row_index}"):
+    if st.button("Save profile", type="primary", key=f"save_profile_{row_index}"):
         df.at[row_index, "Player Current Team"] = team_val.strip()
         df.at[row_index, "Division"]            = division_val.strip()
         df.at[row_index, "Age Group"]           = age_group_val.strip()
@@ -2577,7 +2566,7 @@ def _sanitize_defaults(defaults: list[str] | None, options: list[str]) -> tuple[
 PUBLIC_NAV_ITEMS = [
     ("Overview", "nav_overview"),
     ("Player Intelligence", "nav_player_intelligence"),
-    ("Data Lab", "nav_data_lab"),
+    ("Recruitment Data Workspace", "nav_data_lab"),
     ("Shortlist Board", "nav_shortlist"),
     ("Settings", "nav_settings"),
 ]
@@ -2626,7 +2615,7 @@ nav = st.session_state.nav
 
 if nav == "Settings":
     st.header("Settings")
-    st.caption("Keep the working pages clean. Use this page for paths, data health, cache controls and debug mode.")
+    st.caption("Keep the working pages clean. Use this page for paths, data health and cache controls.")
 
     def _settings_non_empty_count(series: pd.Series) -> int:
         return int(series.fillna("").astype(str).str.strip().ne("").sum()) if isinstance(series, pd.Series) else 0
@@ -2639,7 +2628,7 @@ if nav == "Settings":
         "Active database",
         "Folders",
         "Data health",
-        "Cache and debug",
+        "Cache",
     ])
 
     with tab_active:
@@ -2729,25 +2718,9 @@ if nav == "Settings":
                 csvs = sorted(Path(folder).glob("*.csv"))
                 st.write(f"{folder}: {len(csvs)} CSV files")
 
-        with st.expander("CSV read errors", expanded=False):
-            errs = st.session_state.get("wyscout_read_errors", [])
-            if errs:
-                st.code("\n".join(errs[-40:]))
-                if st.button("Clear CSV read errors", key="settings_clear_wyscout_read_errors"):
-                    st.session_state["wyscout_read_errors"] = []
-                    st.rerun()
-            else:
-                st.caption("No CSV read errors logged.")
-
     with tab_cache:
-        st.subheader("Cache and debug")
-        st.session_state["debug_mode"] = st.toggle(
-            "Show debug panels inside scouting pages",
-            value=bool(st.session_state.get("debug_mode", False)),
-            key="settings_debug_mode_toggle",
-        )
-
-        st.caption("Leave debug mode off during normal scouting work. Turn it on when checking Wyscout paths, metric mappings or position matching.")
+        st.subheader("Cache")
+        st.session_state["debug_mode"] = False
 
         if st.button("Clear Streamlit cache", key="settings_clear_cache"):
             st.cache_data.clear()
@@ -2841,12 +2814,12 @@ if nav == "Overview":
             st.session_state.nav = "Player Intelligence"
             st.rerun()
     with w2:
-        _workflow_card("Step 2", "Data Lab", "Compare players against role relevant cohorts, build radars, use preset KPI profiles and export ranking evidence cleanly.")
-        if st.button("Open Data Lab", use_container_width=True, key="home_open_data"):
-            st.session_state.nav = "Data Lab"
+        _workflow_card("Step 2", "Recruitment Data Workspace", "Compare players against role relevant cohorts, build radars and use preset KPI profiles for clear ranking evidence.")
+        if st.button("Open Recruitment Data Workspace", use_container_width=True, key="home_open_data"):
+            st.session_state.nav = "Recruitment Data Workspace"
             st.rerun()
     with w3:
-        _workflow_card("Step 3", "Shortlist Board", "Move from longlist to role based shortlist, manage ranked options and export a clean recruitment board.")
+        _workflow_card("Step 3", "Shortlist Board", "Move from longlist to role based shortlist and manage ranked options in a clean recruitment board.")
         if st.button("Open Shortlist Board", use_container_width=True, key="home_open_shortlist"):
             st.session_state.nav = "Shortlist Board"
             st.rerun()
@@ -2920,7 +2893,7 @@ if nav == "Player Intelligence":
 # =========================
 # 15) DATA ANALYSIS PAGE
 # =========================
-if nav == "Data Lab":
+if nav == "Recruitment Data Workspace":
     recruitment_da.render_data_analysis_page(
         wyscout_folders=wyscout_folders,
         dea_block=dea_block,
@@ -3280,7 +3253,7 @@ if nav == "Shortlist Board":
         buf.seek(0)
         return buf.getvalue()
 
-    tab_pitch, tab_select, tab_table = st.tabs(["Pitch Board", "Selection and Status", "Summary and Export"])
+    tab_pitch, tab_select, tab_table = st.tabs(["Pitch Board", "Selection and Status", "Summary"])
 
     with tab_pitch:
         top_left, top_right = st.columns([1, 3])
@@ -3291,7 +3264,6 @@ if nav == "Shortlist Board":
 
         pitch_png = _render_pitch_board(max_names=int(players_on_pitch))
         st.image(pitch_png, caption="Shortlist Board", use_container_width=True)
-        st.download_button("Download pitch board PNG", data=pitch_png, file_name="shortlist_board.png", mime="image/png", key="shortlist_pitch_png_download")
 
     with tab_select:
         st.caption("Pick players by role. Existing selected players stay available even when the filters are changed, so you do not lose the board accidentally.")
@@ -3436,25 +3408,3 @@ if nav == "Shortlist Board":
             tbl = tbl[display_cols]
             st.dataframe(tbl, use_container_width=True, hide_index=True, height=460)
 
-            col_dl1, col_dl2 = st.columns(2)
-            col_dl1.download_button(
-                "Download shortlist CSV",
-                data=tbl.to_csv(index=False).encode("utf-8-sig"),
-                file_name="shortlist_board.csv",
-                mime="text/csv",
-                key="shortlist_tbl_csv",
-            )
-
-            try:
-                out = io.BytesIO()
-                with pd.ExcelWriter(out, engine="xlsxwriter") as writer:
-                    tbl.to_excel(writer, index=False, sheet_name="Shortlist Board")
-                col_dl2.download_button(
-                    "Download shortlist Excel",
-                    data=out.getvalue(),
-                    file_name="shortlist_board.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    key="shortlist_tbl_xlsx",
-                )
-            except Exception:
-                st.caption("Install xlsxwriter for Excel export. CSV export always works.")

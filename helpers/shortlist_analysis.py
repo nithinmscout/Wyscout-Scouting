@@ -26,10 +26,10 @@ def _open_report_or_data_profile(
 
     if focus_row_id:
         st.session_state["profile_focus_id"] = str(focus_row_id)
-        st.session_state["nav"] = "📝 Player reports"
+        st.session_state["nav"] = "Player Intelligence"
         st.rerun()
 
-    # 2) Fallback: open the Data analysis Search profile flow
+    # 2) Fallback: open the Recruitment Data Workspace Search profile flow
     # Clear any old report focus so the Player reports page does not hijack later
     st.session_state["profile_focus_id"] = None
 
@@ -39,7 +39,7 @@ def _open_report_or_data_profile(
     st.session_state["goto_team_plain"] = str(team_name or "").strip()
     st.session_state["goto_ws_id_plain"] = str(ws_id or "").strip()
 
-    st.session_state["nav"] = "📊 Data analysis"
+    st.session_state["nav"] = "Recruitment Data Workspace"
     st.rerun()
 
 
@@ -202,9 +202,9 @@ def render_team_analysis_tab(master_df, df_scout_db):
             if team_name:
                 st.session_state["rep_team"] = team_name
 
-        st.session_state["nav"] = "📝 Player reports"
+        st.session_state["nav"] = "Player Intelligence"
         try:
-            st.session_state.nav = "📝 Player reports"
+            st.session_state.nav = "Player Intelligence"
         except Exception:
             pass
 
@@ -292,6 +292,7 @@ def render_team_analysis_tab(master_df, df_scout_db):
                 margin=dict(l=10, r=10, t=60, b=10),
             )
             st.plotly_chart(fig_box, use_container_width=True)
+            st.caption("Box plot compares the selected team age profile against the wider league.")
 
     if age_col and mins_col and px is not None:
         df_sc = team_df[[player_col, pos_col]].copy()
@@ -312,6 +313,7 @@ def render_team_analysis_tab(master_df, df_scout_db):
                 margin=dict(l=10, r=10, t=60, b=10),
             )
             st.plotly_chart(fig_sc, use_container_width=True)
+            st.caption("Scatter plot shows squad usage by age and minutes.")
 
     # -------------------------
     # Tactical Footprint PCA
@@ -402,6 +404,7 @@ def render_team_analysis_tab(master_df, df_scout_db):
                         margin=dict(l=10, r=10, t=60, b=10),
                     )
                     st.plotly_chart(fig_pca, use_container_width=True)
+                    st.caption("Style map places the selected team against league peers using aggregated team metrics.")
 
                 with st.expander("Style metrics used (team aggregated)", expanded=False):
                     st.dataframe(team_style[["Team"] + style_metrics], use_container_width=True, hide_index=True)
@@ -493,7 +496,7 @@ def render_team_analysis_tab(master_df, df_scout_db):
     # -------------------------
     # Deep dive
     # -------------------------
-    st.markdown("### 🔍 Deep Dive")
+    st.markdown("### Player Deep Dive")
 
     squad_names = team_scored[player_col].dropna().astype(str).tolist()
     if not squad_names:
@@ -562,6 +565,7 @@ def render_team_analysis_tab(master_df, df_scout_db):
                 margin=dict(l=10, r=10, t=70, b=10),
             )
             st.plotly_chart(fig, use_container_width=True)
+            st.caption("Radar shows how the selected player compares across role KPIs.")
 
             df_k = pd.DataFrame({"Metric": role_kpis, "Raw": raw_vals, "Percentile": pct_vals})
             st.dataframe(df_k, use_container_width=True, hide_index=True)
@@ -589,14 +593,14 @@ def render_team_analysis_tab(master_df, df_scout_db):
 
             if row_id:
                 st.session_state["profile_focus_id"] = str(row_id)
-                st.session_state["nav"] = "📝 Player reports"
+                st.session_state["nav"] = "Player Intelligence"
                 st.rerun()
 
-            # 2) Otherwise open the Data analysis player data profile (Search tab behaviour)
+            # 2) Otherwise open the Recruitment Data Workspace player data profile (Search tab behaviour)
             st.session_state["profile_focus_id"] = None
             st.session_state["da_jump_to"] = "search"
             st.session_state["goto_ws_id_plain"] = ws_id
             st.session_state["goto_player_plain"] = _safe_str(sel_player)
             st.session_state["goto_team_plain"] = team_name
-            st.session_state["nav"] = "📊 Data analysis"
+            st.session_state["nav"] = "Recruitment Data Workspace"
             st.rerun()

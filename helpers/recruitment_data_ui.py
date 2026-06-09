@@ -186,6 +186,20 @@ def _render_data_analysis_styles() -> None:
             border: 1px solid rgba(148, 163, 184, 0.14);
             border-radius: 14px;
             overflow: hidden;
+            background: rgba(15, 23, 42, 0.34);
+        }
+        .da-chart-caption {
+            color: #94a3b8;
+            font-size: 0.82rem;
+            line-height: 1.35;
+            margin: 4px 0 14px 0;
+        }
+        .da-compact-table-shell {
+            border: 1px solid rgba(148, 163, 184, 0.16);
+            background: rgba(15, 23, 42, 0.38);
+            border-radius: 16px;
+            padding: 10px 12px;
+            margin: 8px 0 12px 0;
         }
         @media (max-width: 1200px) {
             .da-status-grid, .da-workflow-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -216,7 +230,7 @@ def _render_data_analysis_header(*, nation_dirs: list[str], div_df: pd.DataFrame
         f"""
         <div class="da-hero">
             <div class="da-hero-kicker">Recruitment data workspace</div>
-            <div class="da-hero-title">Data analysis built for scouting decisions</div>
+            <div class="da-hero-title">Recruitment Data Workspace</div>
             <div class="da-hero-text">
                 Use this page to search by leagues, find outliers, open player profiles, compare shortlist options and check team context. The aim is not to replace video scouting, but to reduce noise before you spend time watching clips and full matches.
             </div>

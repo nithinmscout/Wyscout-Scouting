@@ -303,11 +303,11 @@ def render_u21_tab(
     role_profile_options: List[str],
 ):
     """
-    Streamlit UI for the U21 development view.
+    Streamlit UI for the Emerging Talent View.
     You pass in st, the master df, and choice lists.
     """
 
-    st.subheader("U21 development view")
+    st.subheader("Emerging Talent View")
 
     col1, col2, col3 = st.columns(3)
     position_code = col1.selectbox("Position filter", position_options, index=0)
@@ -316,7 +316,7 @@ def render_u21_tab(
         "Rank by metric",
         ["_emergence_index", "_cfpi_youth", "_cfpi_balanced", "_bps"],
         format_func=lambda x: {
-            "_emergence_index": "Emergence Index",
+            "_emergence_index": "Emerging Talent Score",
             "_cfpi_youth": "CFPI Youth",
             "_cfpi_balanced": "CFPI Balanced",
             "_bps": "Base Performance Score",
@@ -368,7 +368,7 @@ def render_u21_tab(
     ]
     show_cols = [c for c in show_cols if c in df_ranked.columns]
 
-    st.markdown("#### Top U21 performers for this position")
+    st.markdown("#### Top emerging players for this position")
     st.dataframe(df_ranked[show_cols].head(20), use_container_width=True, hide_index=True)
 
     # simple bar chart
@@ -387,5 +387,6 @@ def render_u21_tab(
             )
         )
         st.altair_chart(chart, use_container_width=True)
+        st.caption("Chart ranks young players by the selected development score within the chosen position group.")
     except Exception:
         st.caption("Altair not available, showing table only.")
