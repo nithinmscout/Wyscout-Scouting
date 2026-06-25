@@ -12,12 +12,22 @@ import os, io, re, datetime as dt, base64, uuid, csv
 from datetime import datetime, date
 import streamlit.components.v1 as components
 import math
+import textwrap
 import numpy as np
 import glob
 try:
     import plotly.graph_objects as go
 except Exception:
     go = None
+
+try:
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.units import cm
+    from reportlab.pdfgen import canvas
+except Exception:
+    A4 = None
+    cm = 28.3464566929
+    canvas = None
 
 from helpers.profile_defs import POSITION_ROLES, GLOBAL_TRAITS, RESPONSIBILITIES,ROLE_DEFINITIONS,TRAIT_DEFINITIONS, RESPONSIBILITY_DEFINITIONS
 from helpers.profile_defs import _to_num, role_group_from_profile, _dot_rating_row, norm_col_name, _resolve_metric_col, _weighted_mean, _metric_percentile
@@ -31,7 +41,7 @@ CORE_INDEX_ORDER = [
 
 
 def _pr_debug_mode_enabled() -> bool:
-    return False
+    return bool(st.session_state.get("debug_mode", False))
 
 
 def _pr_display_value(value, fallback: str = "Not added") -> str:
@@ -158,6 +168,175 @@ def _render_empty_player_results() -> None:
         """,
         unsafe_allow_html=True,
     )
+
+
+def _player_visible_team(row: pd.Series) -> str:
+    on_loan = str(row.get("On loan", "")).strip().lower() in {"yes", "true", "1"}
+    loan_club = str(row.get("Loan Club", "")).strip()
+    parent_club = str(row.get("Parent Club", "")).strip()
+    team = str(row.get("Player Current Team", "")).strip()
+    return f"{loan_club} to {parent_club}" if on_loan and loan_club and parent_club else (loan_club or team)
+
+
+def player_dossier_filename(row: pd.Series) -> str:
+    name = _pr_display_value(row.get("Name", "player"), "player")
+    safe_name = re.sub(r"[^A-Za-z0-9]+", "_", name).strip("_").lower() or "player"
+    return f"{safe_name}_player_dossier.pdf"
+
+
+def build_player_profile_dossier_pdf(row: pd.Series, visible_team: str | None = None) -> bytes | None:
+    if canvas is None or A4 is None:
+        return None
+
+    visible_team = str(visible_team or _player_visible_team(row) or "").strip()
+    buffer = io.BytesIO()
+    pdf = canvas.Canvas(buffer, pagesize=A4)
+    page_width, page_height = A4
+    margin = 1.45 * cm
+    y = page_height - margin
+
+    def clean(value, fallback: str = "") -> str:
+        return _pr_display_value(value, fallback).replace("\r\n", "\n").replace("\r", "\n")
+
+    def new_page() -> None:
+        nonlocal y
+        pdf.showPage()
+        y = page_height - margin
+
+    def ensure_space(required: float) -> None:
+        if y - required < margin:
+            new_page()
+
+    def draw_line(text: str, *, size: int = 9, bold: bool = False, x: float = margin, leading: float = 12) -> None:
+        nonlocal y
+        ensure_space(leading + 2)
+        pdf.setFont("Helvetica-Bold" if bold else "Helvetica", size)
+        pdf.drawString(x, y, str(text))
+        y -= leading
+
+    def draw_wrapped(text: str, *, size: int = 9, bold: bool = False, x: float = margin, max_chars: int = 95, leading: float = 12) -> None:
+        nonlocal y
+        value = clean(text)
+        if not value:
+            value = "Not added"
+        pdf.setFont("Helvetica-Bold" if bold else "Helvetica", size)
+        for paragraph in value.split("\n"):
+            wrapped = textwrap.wrap(paragraph.strip(), width=max_chars) or [""]
+            for line in wrapped:
+                ensure_space(leading + 2)
+                pdf.drawString(x, y, line)
+                y -= leading
+            y -= 2
+
+    def draw_section(title: str, value: str) -> None:
+        nonlocal y
+        value = clean(value)
+        if not value:
+            return
+        ensure_space(30)
+        y -= 4
+        pdf.setFont("Helvetica-Bold", 11)
+        pdf.drawString(margin, y, title)
+        y -= 14
+        draw_wrapped(value, size=9, max_chars=96, leading=12)
+
+    name = clean(row.get("Name", "Player dossier"), "Player dossier")
+    pdf.setTitle(f"{name} player dossier")
+
+    pdf.setFont("Helvetica-Bold", 18)
+    pdf.drawString(margin, y, name)
+    y -= 20
+    pdf.setFont("Helvetica", 10)
+    subtitle = f"{clean(visible_team, 'Club not added')} | {clean(row.get('Position', ''), 'Position not added')} | Age {clean(row.get('Age', ''), 'Not added')}"
+    pdf.drawString(margin, y, subtitle)
+    y -= 22
+
+    pdf.line(margin, y, page_width - margin, y)
+    y -= 18
+
+    details = [
+        ("Current club", visible_team),
+        ("Division", row.get("Division", "")),
+        ("Playing nation", row.get("Playing Nation", "")),
+        ("Citizenship", row.get("Player Nationality", "")),
+        ("Height", row.get("Player Height", "")),
+        ("Dominant foot", row.get("Dominant Foot", "")),
+        ("TM value", row.get("TM Value", "")),
+        ("Highest TM value", row.get("Highest TM Value", "")),
+        ("Contract until", row.get("Contract Until", "")),
+        ("Agency", row.get("Agency", "")),
+        ("Current ability", row.get("Current Rating (1-4)", "")),
+        ("Potential ability", row.get("Potential Rating (1-4)", "")),
+        ("Shortlist status", row.get("Shortlist Status", "")),
+        ("Verdict", row.get("Verdict", "")),
+        ("Watched", row.get("Watched", "")),
+        ("Wyscout ID", row.get("Wyscout Player ID", "")),
+    ]
+
+    pdf.setFont("Helvetica-Bold", 11)
+    pdf.drawString(margin, y, "Player details")
+    y -= 15
+
+    col_gap = 0.8 * cm
+    col_width = (page_width - (2 * margin) - col_gap) / 2
+    left_x = margin
+    right_x = margin + col_width + col_gap
+
+    for i in range(0, len(details), 2):
+        ensure_space(24)
+        row_y = y
+        for x, item in [(left_x, details[i]), (right_x, details[i + 1] if i + 1 < len(details) else None)]:
+            if item is None:
+                continue
+            label, value = item
+            pdf.setFont("Helvetica-Bold", 7)
+            pdf.drawString(x, row_y, label.upper())
+            pdf.setFont("Helvetica", 9)
+            value_text = clean(value, "Not added")
+            wrapped_value = textwrap.wrap(value_text, width=38) or ["Not added"]
+            pdf.drawString(x, row_y - 10, wrapped_value[0])
+        y -= 26
+
+    kpi_cols = [c for c in row.index if str(c).startswith("KPI: ") and clean(row.get(c))]
+    if kpi_cols:
+        ensure_space(32)
+        y -= 4
+        pdf.setFont("Helvetica-Bold", 11)
+        pdf.drawString(margin, y, "KPI ratings")
+        y -= 15
+        for col in kpi_cols:
+            label = str(col).replace("KPI: ", "")
+            draw_line(f"{label}: {clean(row.get(col), 'Not added')}", size=9, leading=11)
+
+    draw_section("Strengths", row.get("Strengths", ""))
+    draw_section("Weaknesses", row.get("Weaknesses", ""))
+
+    preferred_profile_order = [
+        "Attacking - Off-ball & On-ball",
+        "Defensive - Off-ball & On-ball",
+        "Physical Capacity & Anthropometric",
+        "Psychosocial & Game Knowledge/IQ",
+        "Tactical Fit",
+        "Set-Pieces",
+        "Extra Notes",
+        "Conclusion",
+    ]
+
+    for section in preferred_profile_order:
+        draw_section(section, row.get(f"Profile: {section}", ""))
+
+    extra_profile_cols = [
+        c for c in row.index
+        if str(c).startswith("Profile: ") and str(c).replace("Profile: ", "") not in preferred_profile_order
+    ]
+    for col in extra_profile_cols:
+        draw_section(str(col).replace("Profile: ", ""), row.get(col, ""))
+
+    pdf.setFont("Helvetica", 7)
+    pdf.drawRightString(page_width - margin, margin * 0.55, f"Generated from Recruitment Intelligence Workspace | {dt.datetime.now():%Y-%m-%d}")
+    pdf.save()
+    buffer.seek(0)
+    return buffer.getvalue()
 
 
 def _norm_wsid(v) -> str:
@@ -911,7 +1090,6 @@ def render_player_report_indexes_block(
             showlegend=False,
         )
         st.plotly_chart(fig, use_container_width=True)
-        st.caption("Bar chart summarises role fit scores for the selected player profile.")
     # ---------------------------------------------------------------------
     # Compute position roles
     role_defs = POSITION_ROLES.get(role_group, {})
@@ -1166,6 +1344,54 @@ def render_player_reports_page(
     else:
         wys_root = Path(wys_root)
 
+    # Wyscout debug info
+    if _pr_debug_mode_enabled():
+        with st.expander("Paths and Wyscout debug", expanded=False):
+            APP_ROOT = Path(os.environ.get("SCOUTING_APP_ROOT", Path(__file__).resolve().parent.parent))
+            WYS_ROOT_LOCAL = Path(os.environ.get("WYSROOTDIR", APP_ROOT / "Scouting Workspace" / "25 26"))
+            PHOTO_DIR_LOCAL = APP_ROOT / "Scouting Workspace" / "player photos"
+
+            debug_lines = [
+                f"ROOT: {APP_ROOT}",
+                f"WYS_ROOT: {WYS_ROOT_LOCAL}",
+                f"PHOTO_DIR: {PHOTO_DIR_LOCAL}",
+                f"cwd: {os.getcwd()}",
+                f"ROOT exists: {APP_ROOT.exists()}",
+                f"WYS_ROOT exists: {WYS_ROOT_LOCAL.exists()}",
+                f"PHOTO_DIR exists: {PHOTO_DIR_LOCAL.exists()}",
+            ]
+            st.code("\n".join(debug_lines))
+            base = app_root / "Scouting Workspace"
+            st.code(f"Base scouting dir: {base}\nexists: {base.exists()}")
+
+            if base.exists():
+                try:
+                    kids = sorted([p.name for p in base.iterdir() if p.is_dir()])
+                    st.write("Subfolders under Scouting Workspace:")
+                    st.write(kids)
+                except Exception as e:
+                    st.warning(f"Could not list base folder: {e}")
+
+            # Check expected nation folders
+            for nation in ["Belgium", "Dutch", "France"]:
+                p = wys_root / nation
+                st.code(f"{nation} path: {p}\nexists: {p.exists()}")
+                if p.exists():
+                    csvs = sorted(glob.glob(str(p / "*.csv")))
+                    st.write(f"{nation} csv count: {len(csvs)}")
+                    if csvs:
+                        st.write("First few files:")
+                        st.write([Path(x).name for x in csvs[:5]])
+            st.markdown("#### CSV read errors")
+            errs = st.session_state.get("wyscout_read_errors", [])
+            if errs:
+                # show the latest 20 to keep it readable
+                st.code("\n".join(errs[-20:]))
+                if st.button("Clear CSV read errors", key="clear_wyscout_read_errors"):
+                    st.session_state["wyscout_read_errors"] = []
+            else:
+                st.caption("No CSV read errors logged.")
+
     # ===== DETAIL PAGE =====
     # Force the page to start at top when opening a profile
     components.html("<script>window.parent.scrollTo(0,0)</script>", height=0)
@@ -1302,6 +1528,19 @@ def render_player_reports_page(
                     if st.button(toggle_label, key=f"toggle_player_details_{focus_idx}", use_container_width=True):
                         st.session_state[edit_key] = not st.session_state[edit_key]
                         st.rerun()
+
+                    dossier_pdf = build_player_profile_dossier_pdf(r, visible_team)
+                    if dossier_pdf:
+                        st.download_button(
+                            "Export dossier",
+                            data=dossier_pdf,
+                            file_name=player_dossier_filename(r),
+                            mime="application/pdf",
+                            key=f"export_player_dossier_{focus_idx}",
+                            use_container_width=True,
+                        )
+                    else:
+                        st.caption("Install reportlab to export dossier.")
 
                 img_col, detail_col = st.columns([1, 3])
                 with img_col:
@@ -1727,26 +1966,45 @@ def render_player_reports_page(
 
         with tab_data:
             # =========================
-            # Wyscout link and data panel
+            # 📈 Wyscout link + Data panel (put this inside the DETAIL PAGE for the selected player)
             # Place after your "General details" form, before notes/KPIs
             # =========================
 
             st.markdown("---")
             with st.expander("Wyscout linkage", expanded=False):
-                st.subheader("Wyscout linkage")
+                st.subheader("🔗 Wyscout linkage")
 
                 # Reload current row (in case details were just saved)
                 r = df.loc[focus_idx]
                 st.markdown("<script>window.scrollTo(0, 0);</script>", unsafe_allow_html=True)
                 master = load_wyscout_master()
                 m = load_wyscout_master()
+                if _pr_debug_mode_enabled():
+                    with st.expander("Wyscout loader debug", expanded=False):
+                        # DEBUG BLOCK
+                        st.caption(f"Wyscout rows loaded: {len(m)} | nations={sorted(m['__nation'].dropna().unique().tolist()) if not m.empty else '—'}")
+                        st.write(f"🔍 DEBUG: SCOUTING_APP_ROOT env = {os.environ.get('SCOUTING_APP_ROOT', '')}")
+                        st.write(f"🔍 DEBUG: __file__ = {__file__}")
+                        st.caption("Folders discovered:")
+                        for p in wyscoutfolders():
+                            st.write("•", p)
+                            try:
+                                st.caption("   Files: " + ", ".join(sorted([f for f in os.listdir(p) if f.lower().endswith('.csv')])[:8]) + (" …" if len(os.listdir(p)) > 8 else ""))
+                            except Exception:
+                                pass
+                        m = load_wyscout_master()
+                        st.caption(f"Wyscout rows loaded: {len(m)}")
+                        if not m.empty:
+                            st.caption("Nations: " + ", ".join(sorted(m['__nation'].dropna().unique().tolist())))
+                            st.dataframe(m.head(10), use_container_width=True, hide_index=True)
+
                 ws_id_cur = str(r.get("Wyscout Player ID","")).strip()
                 ws_id_in = st.text_input("Wyscout Player ID", value=ws_id_cur, key=f"wsid_{focus_idx}",
                                         help="If you know it already, paste the Wyscout ID used in your exports (or leave blank and use auto/manual below).")
 
                 cols_lk = st.columns([1,1,2])
                 with cols_lk[0]:
-                    if st.button("Save ID", key=f"save_wsid_{focus_idx}"):
+                    if st.button("💾 Save ID", key=f"save_wsid_{focus_idx}"):
                         df.at[focus_idx, "Wyscout Player ID"] = ws_id_in.strip()
                         df.at[focus_idx, "Last edited time"] = dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                         _log_save_identity("About to save", df)  # must be the full DB
@@ -1758,7 +2016,7 @@ def render_player_reports_page(
                     if master.empty:
                         st.caption("No Wyscout data loaded.")
                     else:
-                        if st.button("Auto attach", key=f"auto_wsid_{focus_idx}"):
+                        if st.button("🤖 Auto-attach", key=f"auto_wsid_{focus_idx}"):
                             wsid, cands = try_auto_attach_wyscout_id(master, r, score_threshold=0.70)
                             st.session_state[f"ws_cands_{focus_idx}"] = cands
                             if wsid:
@@ -1824,7 +2082,7 @@ def render_player_reports_page(
 
 
             st.markdown("---")
-            st.subheader("Peer Group Comparison")
+            st.subheader("📈 Data — cohort comparison")
         
             # Always define these BEFORE any reference later in the function
             player_row = pd.Series(dtype=object)          # will later hold the player row from ztab
@@ -1841,7 +2099,7 @@ def render_player_reports_page(
             master = load_wyscout_master()
         
             if master.empty:
-                st.info("No Wyscout data loaded yet. Add your Belgium, Dutch and France CSVs to the folders used by your Recruitment Data Workspace.")
+                st.info("No Wyscout data loaded yet. Add your Belgium/Dutch/France CSVs to the folders used by your Data analysis section.")
             else:
                 # ---- Division picker (Belgium1 / Dutch2 / France3) + minutes + age ----
                 # Build one label per file/tier in the master table, like your Analysis tab
@@ -2029,6 +2287,7 @@ def render_player_reports_page(
                             (pd.to_numeric(master.get("Age", 0), errors="coerce").fillna(0) <= age_max)
 
                 master_filtered = master[mask_div & mask_mins & mask_age].copy()
+                st.caption(f"master rows: {len(master)} | filtered rows: {len(master_filtered)} | sel_divisions={len(sel_divisions)} | nat_hint={nat_hint or '—'} | tier_hint={tier_hint}")
 
                 # make sure __division exists on the cohort table later (useful for leader annotations)
             
@@ -2241,6 +2500,8 @@ def render_player_reports_page(
                     age_min=int(age_min),
                     age_max=int(age_max)
                 )
+
+                st.caption(f"ztab rows: {0 if ztab is None else len(ztab)} | packs={0 if not packs else len(packs)}")
                 # IMPORTANT: make responsibilities use the same cohort table we just built
                 cohort_df = ztab
                 st.session_state["cohort_df_current"] = ztab
@@ -2354,16 +2615,15 @@ def render_player_reports_page(
                 if "__overall_score" in df_prev.columns:
                     df_prev = df_prev.sort_values("__overall_score", ascending=False)
 
-                with st.expander("Top ranked players in peer group", expanded=False):
-                    st.dataframe(
-                        df_prev[preview_cols].head(25),
-                        use_container_width=True,
-                        hide_index=True
-                    )
+                st.dataframe(
+                    df_prev[preview_cols].head(25),
+                    use_container_width=True,
+                    hide_index=True
+                )
 
             
             # =========================
-            # Data rich rendering
+            # 📈 Data (rich rendering) — place this immediately after Part 2
             # =========================
 
             st.markdown("---")
@@ -2419,7 +2679,7 @@ def render_player_reports_page(
                     return (m in ztab.columns) and (f"{m}__pct" in ztab.columns) and (f"{m}__rank" in ztab.columns) and (f"{m}__z" in ztab.columns)
 
                 # ------- TOP 5 strengths for this player -------
-                st.subheader("Top 5 strengths in this cohort")
+                st.subheader("🏅 Top 5 strengths in this cohort")
                 if target_row.empty:
                     st.caption("This player is not in the cohort (no Wyscout ID or exact name match). Showing cohort leaders for now.")
 
@@ -2585,7 +2845,7 @@ def render_player_reports_page(
                 # -----------------------------
                 # Data section (injection point)
                 # -----------------------------
-                st.subheader("Player Role Profile")
+                st.subheader("What type of player is this with respect to position")
 
                 # ----------------------------
                 # 1) Index definitions
@@ -2758,7 +3018,6 @@ def render_player_reports_page(
                         height=420,
                     )
                     st.plotly_chart(fig, use_container_width=True)
-                    st.caption("Radar shows the player profile across the selected scouting indices.")
 
 
                 def _render_index_distributions(
@@ -2789,7 +3048,6 @@ def render_player_reports_page(
                         fig.update_layout(height=320, margin=dict(l=20, r=20, t=30, b=20), title=name)
                         with cols[j % 2]:
                             st.plotly_chart(fig, use_container_width=True)
-                            st.caption("Distribution shows where the player sits against the selected peer group.")
 
                 nation_dirs = wyscoutfolders()
 
@@ -2871,6 +3129,90 @@ def render_player_reports_page(
                     chosen_pos = str(player_row.get("Position", ""))  # fallback
 
                 profile_key = _infer_profile_key(chosen_pos)
+                with st.expander("DEBUG positional responsibilities", expanded=False):
+
+                    cdf = None
+                    try:
+                        cdf = cohort_df
+                    except Exception:
+                        cdf = st.session_state.get("cohort_df_current", pd.DataFrame())
+
+                    prow = ws_row_for_resp if isinstance(ws_row_for_resp, pd.Series) else pd.Series(dtype=object)
+
+                    st.write("chosen_pos", chosen_pos)
+                    st.write("profile_key", profile_key)
+                    st.write("ws_id", ws_id)
+                    st.write("cohort_df shape", getattr(cdf, "shape", None))
+                    st.write("player_row name", getattr(prow, "name", None))
+                    st.write("player_row cols", int(len(prow.index)) if isinstance(prow, pd.Series) else None)
+
+                    if cdf is None or (hasattr(cdf, "empty") and cdf.empty):
+                        st.error("cohort_df is empty inside the responsibilities block")
+                    else:
+                        cols_list = [str(c) for c in cdf.columns]
+                        st.write("cohort_df columns count", int(len(cols_list)))
+                        st.write("cohort_df columns sample", cols_list[:60])
+
+                        pct_cols = [c for c in cols_list if c.endswith("__pct")]
+                        z_cols = [c for c in cols_list if c.endswith("__z")]
+                        st.write("columns ending __pct", int(len(pct_cols)))
+                        st.write("columns ending __z", int(len(z_cols)))
+                        st.write("sample __pct cols", pct_cols[:25])
+                        st.write("sample __z cols", z_cols[:25])
+
+                    spec = RESPONSIBILITIES.get(profile_key, RESPONSIBILITIES.get("CF", {}))
+                    st.write("spec keys", list(spec.keys()))
+
+                    rows = []
+                    for resp_name, metric_list in spec.items():
+                        for metric_col, higher_is_better, w in metric_list:
+                            real_col = None
+                            close = []
+                            pv = np.nan
+                            nn = 0
+                            vmin = np.nan
+                            vmax = np.nan
+                            pct = np.nan
+
+                            if cdf is not None and (not hasattr(cdf, "empty") or not cdf.empty):
+                                real_col = _resolve_metric_col(cdf, metric_col)
+                                cols_list = [str(c) for c in cdf.columns]
+                                close = difflib.get_close_matches(str(metric_col), cols_list, n=5, cutoff=0.55)
+
+                                if real_col is not None and real_col in cdf.columns:
+                                    pv = _to_num(prow.get(real_col, np.nan))
+                                    ser = pd.to_numeric(cdf[real_col], errors="coerce")
+                                    nn = int(ser.notna().sum())
+                                    if nn:
+                                        vmin = float(ser.min())
+                                        vmax = float(ser.max())
+                                        if not (isinstance(pv, float) and math.isnan(pv)):
+                                            pct = float(_metric_percentile(cdf, real_col, pv, higher_is_better))
+
+                            rows.append(
+                                {
+                                    "responsibility": str(resp_name),
+                                    "metric_requested": str(metric_col),
+                                    "resolved_column": "" if real_col is None else str(real_col),
+                                    "higher_is_better": bool(higher_is_better),
+                                    "weight": float(w),
+                                    "player_value": pv,
+                                    "cohort_non_null": nn,
+                                    "cohort_min": vmin,
+                                    "cohort_max": vmax,
+                                    "metric_percentile": pct,
+                                    "close_matches": ", ".join([str(x) for x in close]),
+                                }
+                            )
+
+                    dbg = pd.DataFrame(rows)
+                    st.dataframe(dbg, use_container_width=True, hide_index=True)
+
+                    if "resolved_column" in dbg.columns:
+                        unresolved = dbg[dbg["resolved_column"].astype(str).str.len() == 0]
+                        if len(unresolved) > 0:
+                            st.warning("Some metrics are not resolving to any column. Fix naming or add aliases in _resolve_metric_col.")
+
                 # Compute responsibility scores (percentiles vs cohort) using the correct Wyscout columns
                 resp_scores, resp_breakdown = _compute_responsibility_scores(
                     cohort_df=cohort_df,
@@ -2914,87 +3256,88 @@ def render_player_reports_page(
 
 
                 st.markdown("---")
-                with st.expander("Detailed metric tables", expanded=False):
-                    # ------- Per-cluster metric tables with coloured percentiles -------
-                    # Build a dynamic Set-pieces cluster from available columns
-                    sp_keys = []
-                    TOKS = [
-                        "set piece", "set-piece", "corners", "corner",
-                        "free kick", "freekick", "throw-in", "throw in",
-                        "penalty", "pens", "penalties"
-                    ]
-                    # Known Wyscout-ish column names to catch when the free-text search fails
-                    SP_WHITELIST = [
-                        "Corner kicks", "Corner kicks accurate", "Corner assist",
-                        "Free kicks", "Free kicks on target", "Free kick shots",
-                        "Penalty goals", "Penalty attempts", "xG from set pieces",
-                        "xA from set pieces", "Shots from set pieces", "Goals from set pieces",
-                        "Throw-in to shot", "Throw-ins leading to chances"
-                    ]
+                st.subheader("📊 Metric tables")
+                # ------- Per-cluster metric tables with coloured percentiles -------
+                # Build a dynamic Set-pieces cluster from available columns
+                sp_keys = []
+                TOKS = [
+                    "set piece", "set-piece", "corners", "corner",
+                    "free kick", "freekick", "throw-in", "throw in",
+                    "penalty", "pens", "penalties"
+                ]
+                # Known Wyscout-ish column names to catch when the free-text search fails
+                SP_WHITELIST = [
+                    "Corner kicks", "Corner kicks accurate", "Corner assist",
+                    "Free kicks", "Free kicks on target", "Free kick shots",
+                    "Penalty goals", "Penalty attempts", "xG from set pieces",
+                    "xA from set pieces", "Shots from set pieces", "Goals from set pieces",
+                    "Throw-in to shot", "Throw-ins leading to chances"
+                ]
 
-                    for c in ztab.columns:
-                        # percentiles or z columns are derived; keep just the base metric name
-                        base = str(c)
-                        if base.endswith("__pct") or base.endswith("__z") or base.endswith("__rank") or base.endswith("__mu") or base.endswith("__sd"):
-                            continue
-                        cs = base.casefold()
-                        hit = any(tok in cs for tok in TOKS) or base in SP_WHITELIST
-                        if hit and pd.api.types.is_numeric_dtype(pd.to_numeric(ztab[base], errors="coerce")):
-                            sp_keys.append(base)
+                for c in ztab.columns:
+                    # percentiles or z columns are derived; keep just the base metric name
+                    base = str(c)
+                    if base.endswith("__pct") or base.endswith("__z") or base.endswith("__rank") or base.endswith("__mu") or base.endswith("__sd"):
+                        continue
+                    cs = base.casefold()
+                    hit = any(tok in cs for tok in TOKS) or base in SP_WHITELIST
+                    if hit and pd.api.types.is_numeric_dtype(pd.to_numeric(ztab[base], errors="coerce")):
+                        sp_keys.append(base)
 
-                    packs_ext = dict(packs)
-                    if sp_keys:
-                        packs_ext["Set-pieces"] = sorted(set(sp_keys))
-
-
-                    for cluster_name, metrics in packs_ext.items():
-                        rows_html = []
-                        for m in metrics:
-                            zcol  = f"{m}__z"
-                            pcol  = f"{m}__pct"
-                            mucol = f"{m}__mu"   # remove if you don’t have these
-                            sdcol = f"{m}__sd"   # remove if you don’t have these
-
-                            raw = player_row.get(m, np.nan) if player_row is not None else np.nan
-                            pct = player_row.get(pcol, np.nan) if player_row is not None else np.nan
-                            zsc = player_row.get(zcol, np.nan) if player_row is not None else np.nan
+                packs_ext = dict(packs)
+                if sp_keys:
+                    packs_ext["Set-pieces"] = sorted(set(sp_keys))
 
 
-                            # optional cohort mu/sd columns
-                            mu    = ztab[mucol].iloc[0] if mucol in ztab.columns and len(ztab) else np.nan
-                            sd    = ztab[sdcol].iloc[0] if sdcol in ztab.columns and len(ztab) else np.nan
+                for cluster_name, metrics in packs_ext.items():
+                    rows_html = []
+                    for m in metrics:
+                        zcol  = f"{m}__z"
+                        pcol  = f"{m}__pct"
+                        mucol = f"{m}__mu"   # remove if you don’t have these
+                        sdcol = f"{m}__sd"   # remove if you don’t have these
 
-                            bar = _pct_bar(pct) if pd.notna(pct) else _pct_bar(0)
+                        raw = player_row.get(m, np.nan) if player_row is not None else np.nan
+                        pct = player_row.get(pcol, np.nan) if player_row is not None else np.nan
+                        zsc = player_row.get(zcol, np.nan) if player_row is not None else np.nan
 
-                            if pcol in ztab.columns and pd.notna(pct):
-                                rank = int((ztab[pcol] > pct).sum() + 1)
-                            elif zcol in ztab.columns and pd.notna(zsc):
-                                rank = int((ztab[zcol] > zsc).sum() + 1)
-                            else:
-                                rank = None
 
-                            rows_html.append(
-                                "<tr>"
-                                f"<td class='metric-label'>{m}</td>"
-                                f"<td class='right'>{_fmt_raw(raw)}</td>"
-                                f"<td style='min-width:160px'>{bar}</td>"
-                                f"<td class='right dim'>{_fmt_pct(pct)}</td>"
-                                f"<td class='right'>{rank if rank else '—'}</td>"
-                                f"<td class='right dim'>{_fmt_raw(mu)}</td>"
-                                f"<td class='right dim'>{_fmt_raw(sd)}</td>"
-                                "</tr>"
-                            )
+                        # optional cohort mu/sd columns
+                        mu    = ztab[mucol].iloc[0] if mucol in ztab.columns and len(ztab) else np.nan
+                        sd    = ztab[sdcol].iloc[0] if sdcol in ztab.columns and len(ztab) else np.nan
 
-                        html = (
-                            f"<div class='dim' style='margin-top:8px;margin-bottom:4px'>{cluster_name}</div>"
-                            "<table class='table-compact'>"
-                            "<thead>"
-                            "<tr><th>Metric</th><th>Player</th><th>Percentile</th><th class='right'>%</th><th class='right'>Rank</th><th class='right'>μ</th><th class='right'>σ</th></tr>"
-                            "</thead><tbody>"
-                            + "".join(rows_html) +
-                            "</tbody></table>"
+                        bar = _pct_bar(pct) if pd.notna(pct) else _pct_bar(0)
+
+                        if pcol in ztab.columns and pd.notna(pct):
+                            rank = int((ztab[pcol] > pct).sum() + 1)
+                        elif zcol in ztab.columns and pd.notna(zsc):
+                            rank = int((ztab[zcol] > zsc).sum() + 1)
+                        else:
+                            rank = None
+
+                        rows_html.append(
+                            "<tr>"
+                            f"<td class='metric-label'>{m}</td>"
+                            f"<td class='right'>{_fmt_raw(raw)}</td>"
+                            f"<td style='min-width:160px'>{bar}</td>"
+                            f"<td class='right dim'>{_fmt_pct(pct)}</td>"
+                            f"<td class='right'>{rank if rank else '—'}</td>"
+                            f"<td class='right dim'>{_fmt_raw(mu)}</td>"
+                            f"<td class='right dim'>{_fmt_raw(sd)}</td>"
+                            "</tr>"
                         )
-                        st.markdown(html, unsafe_allow_html=True)
+
+                    html = (
+                        f"<div class='dim' style='margin-top:8px;margin-bottom:4px'>{cluster_name}</div>"
+                        "<table class='table-compact'>"
+                        "<thead>"
+                        "<tr><th>Metric</th><th>Player</th><th>Percentile</th><th class='right'>%</th><th class='right'>Rank</th><th class='right'>μ</th><th class='right'>σ</th></tr>"
+                        "</thead><tbody>"
+                        + "".join(rows_html) +
+                        "</tbody></table>"
+                    )
+                    st.markdown(html, unsafe_allow_html=True)
+
                 st.markdown("---")
            
                 if not target_row_filtered.empty:
@@ -3087,18 +3430,45 @@ def render_player_reports_page(
                         st.markdown(html, unsafe_allow_html=True)
                 else:
                     st.caption("Player not matched in this filtered cohort — you can still browse cohort tables and leaders above.")
+
+                # ------- Cohort exports (so you can analyse in Excel if you like) -------
+                c1, c2 = st.columns(2)
+                with c1:
+                    if st.button("Download cohort (CSV)", key=f"dl_cohort_csv_{focus_idx}"):
+                        st.download_button(
+                            "Save CSV",
+                            data=ztab.to_csv(index=False).encode("utf-8-sig"),
+                            file_name=f"cohort_{focus_idx}.csv",
+                            mime="text/csv",
+                            key=f"dl_cohort_csv_btn_{focus_idx}"
+                        )
+                with c2:
+                    try:
+                        with pd.ExcelWriter(io.BytesIO(), engine="xlsxwriter") as w:
+                            ztab.to_excel(w, index=False, sheet_name="Cohort")
+                            xldata = w.book.filename.getvalue()  # type: ignore
+                        st.download_button(
+                            "Download cohort (Excel)",
+                            data=xldata,
+                            file_name=f"cohort_{focus_idx}.xlsx",
+                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                            key=f"dl_cohort_xlsx_btn_{focus_idx}"
+                        )
+                    except Exception:
+                        st.caption("Install xlsxwriter for Excel export. CSV export always works.")
+
             # ===== LIST PAGE =====
         
 
         with tab_notes:
             # --- Scouting notes & KPIs
             st.markdown("---")
-            st.subheader("Scouting notes and KPIs")
+            st.subheader("📝 Scouting notes & KPIs")
             df = profile_editor(df, focus_idx)
 
             # --- Full report files
             st.markdown("---")
-            st.subheader("Full report")
+            st.subheader("📄 Full report")
             REPORTS_DIR = os.path.join("Scouting Workspace", "full reports done")
             os.makedirs(REPORTS_DIR, exist_ok=True)
 
@@ -3128,7 +3498,11 @@ def render_player_reports_page(
             with info_col:
                 if cur_pdf_path and os.path.exists(cur_pdf_path):
                     st.caption(f"Saved at: `{cur_pdf_path}`")
-                    st.caption("Report file is available inside the local workspace.")
+                    with open(cur_pdf_path, "rb") as f:
+                        st.download_button("Download PDF", data=f.read(),
+                                        file_name=os.path.basename(cur_pdf_path),
+                                        mime="application/pdf",
+                                        key=f"dl_pdf_{focus_idx}")
                 else:
                     st.info("No report uploaded yet.")
 
@@ -3156,6 +3530,52 @@ def render_player_reports_page(
                             st.info("If the embed is blocked by your browser, switch preview mode to **Image pages** above.")
                     else:
                         st.warning("PDF embed renderer was not passed into the player reports page.")
+
+            st.markdown("---")
+            with st.expander("⚠️ Danger zone", expanded=False):
+                st.markdown(
+                    "This will **permanently delete** the player from your database and "
+                    "remove any saved files for this player (Full Report, Photo Path). "
+                    "**This cannot be undone.**"
+                )
+
+                confirm = st.checkbox("I understand this cannot be undone.", key=f"del_ok_{focus_idx}")
+                confirm_text = st.text_input("Type DELETE to confirm", key=f"del_txt_{focus_idx}")
+
+                delete_disabled = not (confirm and confirm_text.strip().upper() == "DELETE")
+                if st.button("🗑️ Permanently delete player", type="primary", disabled=delete_disabled, key=f"del_btn_{focus_idx}"):
+
+                    # Determine Row ID of the focused player
+                    rid = None
+                    if focus_idx is not None and ROW_ID_COL in df.columns:
+                        rid = str(df.at[focus_idx, ROW_ID_COL])
+                    if not rid:
+                        rid = str(st.session_state.get("profile_focus_id") or "")
+
+                    if not rid:
+                        st.error("Could not determine the player's Row ID.")
+                        st.stop()
+
+                    # Try to remove files for the open row if present
+                    try:
+                        if focus_idx is not None:
+                            row_current = df.loc[focus_idx]
+                            for col in ["Full Report Path", "Photo Path"]:
+                                _safe_unlink(str(row_current.get(col, "")).strip())
+                    except Exception:
+                        pass
+
+                    # Reload and delete strictly by Row ID
+                    df_latest = load_db(st.session_state.db_csv).copy()
+                    if ROW_ID_COL in df_latest.columns:
+                        df_latest = df_latest[df_latest[ROW_ID_COL].astype(str) != rid].copy()
+                        safe_write_db(st.session_state.db_csv, df_latest)
+                        st.cache_data.clear()
+                        st.success("Player deleted.")
+                        st.session_state.profile_focus_id = None
+                        st.rerun()
+                    else:
+                        st.error("Row ID column missing from database; cannot safely delete.")
 
     # ===== CARD GRID (list view)
     else:
