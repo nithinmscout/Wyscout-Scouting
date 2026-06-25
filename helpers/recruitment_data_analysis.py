@@ -219,14 +219,14 @@ def render_player_type_and_responsibilities_blocks(
                 st.write("Hit KPIs:")
                 st.dataframe(
                     pd.DataFrame(hits)[["metric", "player_value", "goodness_pct", "threshold"]],
-                    use_container_width=True,
+                    width="stretch",
                     hide_index=True,
                 )
             if misses:
                 st.write("Missed KPIs:")
                 st.dataframe(
                     pd.DataFrame(misses)[["metric", "player_value", "goodness_pct", "threshold"]],
-                    use_container_width=True,
+                    width="stretch",
                     hide_index=True,
                 )
 
@@ -240,14 +240,14 @@ def render_player_type_and_responsibilities_blocks(
                 st.write("Hit KPIs:")
                 st.dataframe(
                     pd.DataFrame(hits)[["metric", "player_value", "goodness_pct", "threshold"]],
-                    use_container_width=True,
+                    width="stretch",
                     hide_index=True,
                 )
             if misses:
                 st.write("Missed KPIs:")
                 st.dataframe(
                     pd.DataFrame(misses)[["metric", "player_value", "goodness_pct", "threshold"]],
-                    use_container_width=True,
+                    width="stretch",
                     hide_index=True,
                 )
 
@@ -297,7 +297,7 @@ def render_kpi_radar_compare(
         showlegend=True,
         margin=dict(l=10, r=10, t=50, b=10),
     )
-    st.plotly_chart(fig, use_container_width=True, key=f"{key_prefix}_radar")
+    st.plotly_chart(fig, width="stretch", key=f"{key_prefix}_radar")
 
 
 def _render_hbar(
@@ -348,7 +348,7 @@ def _render_hbar(
     if key is None:
         key = f"hbar_{id(fig)}"
 
-    st.plotly_chart(fig, use_container_width=True, key=key)
+    st.plotly_chart(fig, width="stretch", key=key)
 
 
 #--------------------------------------------------------------------------------
@@ -401,7 +401,7 @@ def _mb_kpi_radar(df_scored, name_col, kpi_cols, target_name, comp_names, key_pr
         height=520,
         title="Radial KPI comparison"
     )
-    st.plotly_chart(fig, use_container_width=True, key=f"{key_prefix}_mb_radar")
+    st.plotly_chart(fig, width="stretch", key=f"{key_prefix}_mb_radar")
 
 
 def render_moneyball_block(
@@ -581,7 +581,7 @@ def render_moneyball_block(
     }
     disp = disp.rename(columns=rename_map)
 
-    st.dataframe(disp, use_container_width=True, hide_index=True)
+    st.dataframe(disp, width="stretch", hide_index=True)
 
     # Player inspection + radar chart (if plotly is available and KPIs exist)
     if used_kpis:
@@ -813,7 +813,7 @@ def render_u21_emergence_block_from_df(st, df_in: pd.DataFrame, key_prefix: str,
         st.warning(
             "Cannot build Emergence index because one of Goals per 90, xG per 90, Shots per 90, or Shots on target % is missing."
         )
-        st.dataframe(df_u21, use_container_width=True, hide_index=True)
+        st.dataframe(df_u21, width="stretch", hide_index=True)
         return
 
     import numpy as np
@@ -930,7 +930,7 @@ def render_u21_emergence_block_from_df(st, df_in: pd.DataFrame, key_prefix: str,
         )
         .properties(height=30 * len(chart_data), width="container")
     )
-    st.altair_chart(chart, use_container_width=True)
+    st.altair_chart(chart, width="stretch")
 
     st.markdown("#### U21 ranking table")
     df_rank["_mins_raw"] = df_rank["_mins"]
@@ -947,7 +947,7 @@ def render_u21_emergence_block_from_df(st, df_in: pd.DataFrame, key_prefix: str,
         "BPS",
         "EmergenceIndex",
     ]
-    st.dataframe(df_rank[display_cols], use_container_width=True, hide_index=True)
+    st.dataframe(df_rank[display_cols], width="stretch", hide_index=True)
     export_buttons(df_rank[display_cols], key_suf=f"_{key_prefix}_u21_emergence")
 
 #--------------------------------------------------------------------------------
@@ -1116,7 +1116,7 @@ def render_budget_alternatives_block_from_similarity(
 
     final_cols = show_cols + ["Market value (€)", "Expected MV (€)", "Value gap (€)", "Value ratio", "Budget match"]
 
-    st.dataframe(df_out[final_cols], use_container_width=True, hide_index=True)
+    st.dataframe(df_out[final_cols], width="stretch", hide_index=True)
 
     if export_buttons is not None:
         export_buttons(df_out[final_cols], key_suf=f"_{key_prefix}_budget_alts")
@@ -1310,13 +1310,13 @@ def render_search_tab_gap_panel(
 
     if not df_gaps.empty:
         st.caption("Gaps are measured as threshold minus player percentile (in percentile points).")
-        st.dataframe(df_gaps, use_container_width=True, hide_index=True)
+        st.dataframe(df_gaps, width="stretch", hide_index=True)
     else:
         st.info("No clear KPI gaps found for the top role or trait at your current thresholds.")
 
     if not df_resp.empty:
         st.caption(f"Lowest responsibilities (below {resp_floor:.0f}th percentile floor).")
-        st.dataframe(df_resp, use_container_width=True, hide_index=True)
+        st.dataframe(df_resp, width="stretch", hide_index=True)
 
 def render_weakness_visuals(gap_payload):
     """
@@ -1512,7 +1512,7 @@ def render_season_trend_block(current_row, kpis, wys_root_func):
             plot_bgcolor="rgba(0,0,0,0)",
             legend=dict(orientation="h", yanchor="bottom", y=1.02)
         )
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
 
     # 4. Metric Delta Table
     st.markdown("**Metric Evolution (Raw Per 90)**")
@@ -1539,7 +1539,7 @@ def render_season_trend_block(current_row, kpis, wys_root_func):
             })
     
     if delta_data:
-        st.dataframe(pd.DataFrame(delta_data), use_container_width=True, hide_index=True)
+        st.dataframe(pd.DataFrame(delta_data), width="stretch", hide_index=True)
     else:
         st.caption("No overlapping numeric metrics found to compare.")
 
@@ -2138,7 +2138,7 @@ def render_search_by_position_panel(
 
     st.dataframe(
         out[show_cols],
-        use_container_width=True,
+        width="stretch",
         hide_index=True,
         column_config={
             "RoleScore": st.column_config.NumberColumn("Role score", format="%.1f"),
@@ -2735,7 +2735,7 @@ def _render_similarity_section(
     st.write(f"Top {top_overall} similar players")
     st.dataframe(
         top_overall_df[["Player", "Team", "Position", "Age", "Similarity"]],
-        use_container_width=True,
+        width="stretch",
         hide_index=True,
         key=f"{key_prefix}_overall",
     )
@@ -2744,7 +2744,7 @@ def _render_similarity_section(
         st.write(f"Top {top_u22} U22 similar players")
         st.dataframe(
             u22_df[["Player", "Team", "Position", "Age", "Similarity"]],
-            use_container_width=True,
+            width="stretch",
             hide_index=True,
             key=f"{key_prefix}_u22",
         )
@@ -3175,7 +3175,7 @@ def render_player_comparison_tab(*, nation_dirs: list[str], key_prefix: str = "c
             height=520,
         )
 
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
 
     # -------------------------------------------
     # 5  roles and responsibilities blocks
@@ -3511,7 +3511,7 @@ def render_player_comparison_tab(*, nation_dirs: list[str], key_prefix: str = "c
 
         if rows:
             sim_df = pd.DataFrame(rows).sort_values("Similarity (0–1)", ascending=False)
-            st.dataframe(sim_df, use_container_width=True)
+            st.dataframe(sim_df, width="stretch")
         else:
             st.caption("Not enough overlapping data to compare the selected players.")
 
@@ -3552,7 +3552,7 @@ def render_player_comparison_tab(*, nation_dirs: list[str], key_prefix: str = "c
             }
         )
 
-    st.dataframe(pd.DataFrame(out_rows), use_container_width=True)
+    st.dataframe(pd.DataFrame(out_rows), width="stretch")
 
 
 def render_analysis_block(
@@ -3850,7 +3850,7 @@ def render_analysis_block(
     out["Rank"] = out["Score"].rank(ascending=False, method="min")
     out = out.sort_values(["Rank", "Score"], ascending=[True, False])
 
-    st.dataframe(out, use_container_width=True, hide_index=True)
+    st.dataframe(out, width="stretch", hide_index=True)
     export_buttons(out, key_suf=f"_{key_prefix}_analysis_raw")
 
     # Optional Marc Lamberts style U21 emergence view for this cohort
@@ -3883,7 +3883,7 @@ def render_u21_emergence_block(
                 df["Age"] = _COMPUTE_AGE_SERIES_FOR_DA(df)
             else:
                 st.info("No Age or DOB column available to build U21 pool.")
-                st.dataframe(df, use_container_width=True, hide_index=True)
+                st.dataframe(df, width="stretch", hide_index=True)
                 st.stop()
 
 
@@ -3898,7 +3898,7 @@ def render_u21_emergence_block(
 
         if df["_mins"].notna().sum() == 0:
             st.info("No minutes column available to build U21 pool.")
-            st.dataframe(df, use_container_width=True, hide_index=True)
+            st.dataframe(df, width="stretch", hide_index=True)
             return
 
         mins_series = df["_mins"]
@@ -3979,7 +3979,7 @@ def render_u21_emergence_block(
                 "Cannot build Emergence index because one of "
                 "Goals per 90, xG per 90, Shots per 90 or Shots on target % is missing."
             )
-            st.dataframe(df_u21, use_container_width=True, hide_index=True)
+            st.dataframe(df_u21, width="stretch", hide_index=True)
             return
 
 
@@ -4140,7 +4140,7 @@ def render_u21_emergence_block(
             )
             .properties(height=30 * len(chart_data), width="container")
         )
-        st.altair_chart(chart, use_container_width=True)
+        st.altair_chart(chart, width="stretch")
 
         st.markdown("#### U21 ranking table for this cohort")
         df_rank["_mins_raw"] = df_rank["_mins"]
@@ -4157,7 +4157,7 @@ def render_u21_emergence_block(
             "BPS",
             "EmergenceIndex",
         ]
-        st.dataframe(df_rank[display_cols], use_container_width=True, hide_index=True)
+        st.dataframe(df_rank[display_cols], width="stretch", hide_index=True)
         if _EXPORT_BUTTONS_FOR_DA is not None:
             _EXPORT_BUTTONS_FOR_DA(df_rank[display_cols], key_suf=f"_{key_prefix}_u21_emergence")
 
@@ -4484,29 +4484,21 @@ def render_data_analysis_page(
                         help="Scales metrics by a league strength factor derived from ClubElo ratings.",
                     )
 
-                    kpi_ready = bool(st.session_state.get(f"{key_prefix}__kpi_cols"))  # or your local kpi_cols list
+                    league_key_prefix = f"multi_{SUF}"
+                    kpi_ready = bool(st.session_state.get(f"{league_key_prefix}__kpi_cols"))
 
                     tier_norm = st.checkbox(
                         "Normalise KPIs by league tier strength",
-                        key=f"da_tier_norm_{key_prefix}_{SUF}",
+                        key=f"da_tier_norm_{league_key_prefix}_{SUF}",
                         value=False,
                         disabled=not kpi_ready,
                         help="Applies league tier coefficients to selected KPIs before radar, similarity, roles, traits, responsibilities.",
                     )
 
-                    elo_norm = st.checkbox(
-                        "Normalise KPIs by ClubElo strength",
-                        key=f"da_elo_norm_{key_prefix}_{SUF}",
-                        value=False,
-                        disabled=not kpi_ready,
-                        help="Applies ClubElo factor to selected KPIs before scoring.",
-                    )
-
-
                     render_analysis_block(
                         label=label,
                         df_all=df_all,
-                        key_prefix=f"multi_{SUF}",
+                        key_prefix=league_key_prefix,
                         dea_block=dea_block,
                         export_buttons=export_buttons,
                         _winsorise=_winsorise,
@@ -5216,7 +5208,7 @@ def render_data_analysis_page(
                 return
 
             st.markdown("### Ranking table")
-            st.dataframe(rank_table, use_container_width=True, hide_index=True)
+            st.dataframe(rank_table, width="stretch", hide_index=True)
             export_buttons(rank_table, key_suf=key_suf)
 
         def _render_two_axis_visual(
@@ -5258,7 +5250,7 @@ def render_data_analysis_page(
                     show_median_lines=True if show_quadrants else show_medians,
                     show_trend_line=allow_trend and show_trend,
                 )
-                st.altair_chart(chart, use_container_width=True)
+                st.altair_chart(chart, width="stretch")
                 _record_visual_history(x_col=x_col, y_col=y_col)
                 _render_rankings(kpG[:], key_suf="_graph_two_axis")
                 return
@@ -5312,7 +5304,7 @@ def render_data_analysis_page(
                     show_median_lines=True if show_quadrants else show_medians,
                     show_trend_line=allow_trend and show_trend,
                 )
-                st.altair_chart(chart, use_container_width=True)
+                st.altair_chart(chart, width="stretch")
                 _record_visual_history(x_col="Composite X", y_col="Composite Y")
                 _render_rankings(kpG[:], key_suf="_graph_composite")
                 return
@@ -5393,7 +5385,7 @@ def render_data_analysis_page(
                 )
 
                 st.markdown(f"#### {metric}")
-                st.altair_chart((box + dots).properties(height=390), use_container_width=True)
+                st.altair_chart((box + dots).properties(height=390), width="stretch")
 
                 higher_is_better = _metric_is_higher_better(metric)
                 rank_cols = [c for c in [COL_PLAYER, COL_TEAM, "Age", "__league_key", "Position"] if c in dfd.columns]
@@ -5403,7 +5395,7 @@ def render_data_analysis_page(
                 table = table.rename(columns={"__metric_value": metric})
 
                 st.markdown("##### Best ranked players")
-                st.dataframe(table.head(30), use_container_width=True, hide_index=True)
+                st.dataframe(table.head(30), width="stretch", hide_index=True)
 
             _record_visual_history()
 
@@ -5538,7 +5530,7 @@ def render_data_analysis_page(
 
             st.markdown("#### Existing presets")
             dfp = _load_presets().copy()
-            st.dataframe(dfp, use_container_width=True, hide_index=True)
+            st.dataframe(dfp, width="stretch", hide_index=True)
 
             ecol1, ecol2, _ = st.columns([1, 1, 2])
 
@@ -6381,7 +6373,7 @@ def render_player_search_tab(
                     reference_cohort[cols_to_show]
                     .drop_duplicates()
                     .sort_values("Player"),
-                    use_container_width=True,
+                    width="stretch",
                     hide_index=True,
                 )
       
@@ -6413,7 +6405,7 @@ def render_player_search_tab(
                     comp_df.set_index("Metric")
                         .style.format("{:.2f}")
                         .bar(subset=[sel_player, selected_reference_player], axis=1),
-                    use_container_width=True,
+                    width="stretch",
                 )
 
 
@@ -6489,7 +6481,7 @@ def render_player_search_tab(
             height=460,
         )
 
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
 
 
         
@@ -7085,7 +7077,7 @@ def render_player_search_tab(
                                     "RespSim",
                                 ]
                             ].head(25),
-                            use_container_width=True,
+                            width="stretch",
                             hide_index=True,
                         )
                     else:
@@ -7099,7 +7091,7 @@ def render_player_search_tab(
                                     "Similarity",
                                 ]
                             ].head(25),
-                            use_container_width=True,
+                            width="stretch",
                             hide_index=True,
                         )
 
@@ -7339,7 +7331,7 @@ def render_player_search_tab(
             file_name=f"{safe_player}_scouting_dossier.pdf",
             mime="application/pdf",
             key="export_player_dossier_pdf",
-            use_container_width=True,
+            width="stretch",
         )
     except Exception as e:
         st.error(f"Failed to prepare scouting dossier export: {e}")
