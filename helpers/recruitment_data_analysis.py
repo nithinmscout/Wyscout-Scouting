@@ -59,15 +59,6 @@ from helpers.recruitment_data_ui import (
 _COMPUTE_AGE_SERIES_FOR_DA = None
 _EXPORT_BUTTONS_FOR_DA = None
 
-
-def _admin_tools_enabled() -> bool:
-    try:
-        secret_value = st.secrets.get("SCOUTING_ADMIN_MODE", False)
-    except Exception:
-        secret_value = False
-    env_value = os.environ.get("SCOUTING_ADMIN_MODE", "")
-    return str(secret_value).strip().lower() in {"1", "true", "yes", "on"} or str(env_value).strip().lower() in {"1", "true", "yes", "on"}
-
 # ---------- local helpers that belong only to the data analysis page ----------
 
 
@@ -99,13 +90,15 @@ def render_player_type_and_responsibilities_blocks(
         profile_key = raw
     else:
         profile_key = _infer_profile_key(position_text)
+    st.caption(f"Search tab mapping | position_text='{position_text}' -> profile_key='{profile_key}'")
     # after profile_key is decided
     if profile_key not in RESPONSIBILITIES:
         st.warning(f"Unmapped position_text='{position_text}'. No profile key derived, so no player type shown.")
         return
     
     role_group = role_group_from_profile(profile_key)
-    st.caption(f"Role profile: {profile_key} | Role group: {role_group}")
+    # Helpful debug while you validate mapping
+    st.caption(f"Profile: {profile_key} | Role group: {role_group}")
 
     st.markdown("### Player type")
 
@@ -305,7 +298,6 @@ def render_kpi_radar_compare(
         margin=dict(l=10, r=10, t=50, b=10),
     )
     st.plotly_chart(fig, use_container_width=True, key=f"{key_prefix}_radar")
-    st.caption("Radar shows the selected player profile against the chosen peer group.")
 
 
 def _render_hbar(
@@ -357,11 +349,10 @@ def _render_hbar(
         key = f"hbar_{id(fig)}"
 
     st.plotly_chart(fig, use_container_width=True, key=key)
-    st.caption("Chart shows the selected KPI values as percentile style profile signals.")
 
 
 #--------------------------------------------------------------------------------
-# ---- Market opportunity shortlist helpers ---- ----
+# ---- Moneyball data analysis helpers ---- ----
 #--------------------------------------------------------------------------------
 
 
@@ -407,11 +398,10 @@ def _mb_kpi_radar(df_scored, name_col, kpi_cols, target_name, comp_names, key_pr
         polar=dict(radialaxis=dict(visible=True, range=[0, 100])),
         showlegend=True,
         margin=dict(l=10, r=10, t=30, b=10),
-        height=460,
+        height=520,
         title="Radial KPI comparison"
     )
     st.plotly_chart(fig, use_container_width=True, key=f"{key_prefix}_mb_radar")
-    st.caption("Radar summarises the strongest market opportunity signals for the selected shortlist.")
 
 
 def render_moneyball_block(
@@ -419,14 +409,11 @@ def render_moneyball_block(
     kpi_cols,
     key_prefix,
     metric_direction=None,
-    title="Market Opportunity Shortlist",
+    title="Moneyball",
 ):
     if df is None or df.empty:
-        st.info("No data available for Market Opportunity Shortlist.")
+        st.info("No data available for Moneyball.")
         return
-
-    if title:
-        st.markdown(f"### {title}")
 
     name_col = _mb_pick_col(df, ["Player", "Player name", "Name", "player_name"])
     team_col = _mb_pick_col(df, ["Team", "Squad", "Club"])
@@ -435,7 +422,7 @@ def render_moneyball_block(
     age_col = _mb_pick_col(df, ["Age", "Player age"])
 
     work = df.copy()
-    # --- Age filter for market opportunity shortlist ---
+    # --- Age filter (Moneyball) ---
     age_col = next((c for c in work.columns if str(c).strip().casefold() == "age"), None)
 
     if age_col is not None:
@@ -473,7 +460,7 @@ def render_moneyball_block(
         work["_contract_dt"] = work[c_src].apply(_mb_parse_contract_dt) if c_src else pd.NaT
 
     if name_col is None:
-        st.warning("Market Opportunity Shortlist needs a player name column to render.")
+        st.warning("Moneyball needs a player name column to render.")
         return
 
     mv = pd.to_numeric(work["_mv_eur"], errors="coerce")
@@ -490,38 +477,27 @@ def render_moneyball_block(
     perf, used_kpis = _mb_build_perf_score(work, kpi_cols=kpi_cols, metric_direction=metric_direction)
     work["_perf_z"] = perf
 
-    value_model = globals().get("_mb_apply_professional_value_model")
-    if callable(value_model):
-        work, valuation_info = value_model(work, perf_col="_perf_z")
-    else:
-        log_mv = pd.Series(np.log(pd.to_numeric(work["_mv_eur"], errors="coerce").values), index=work.index)
-        yhat = _mb_fit_expected_value(log_mv=log_mv, perf=work["_perf_z"], age=work[age_col] if age_col else None)
-        work["_fair_log_mv"] = yhat
-        work["_fair_mv_eur"] = pd.Series(
-            np.exp(pd.to_numeric(work["_fair_log_mv"], errors="coerce").values),
-            index=work.index,
-        )
-        work["_fair_low_eur"] = work["_fair_mv_eur"] * 0.70
-        work["_fair_high_eur"] = work["_fair_mv_eur"] * 1.30
-        work["_valuation_confidence"] = "Medium"
-        valuation_info = {"status": "legacy", "rows_used": len(work), "features_used": []}
-
-    work["_exp_log_mv"] = pd.to_numeric(work.get("_fair_log_mv"), errors="coerce")
-    work["_exp_mv_eur"] = pd.to_numeric(work.get("_fair_mv_eur"), errors="coerce")
+    log_mv = pd.Series(np.log(pd.to_numeric(work["_mv_eur"], errors="coerce").values), index=work.index)
+    yhat = _mb_fit_expected_value(log_mv=log_mv, perf=work["_perf_z"], age=work[age_col] if age_col else None)
+    work["_exp_log_mv"] = yhat
+    work["_exp_mv_eur"] = pd.Series(
+    np.exp(pd.to_numeric(work["_exp_log_mv"], errors="coerce").values),
+    index=work.index
+    )
     # -------------------------------------------------------------------------
     # Render outputs (tables + optional radar)
     # -------------------------------------------------------------------------
 
-    # Basic market opportunity outputs
+    # Basic Moneyball outputs
     work["_value_gap_eur"] = pd.to_numeric(work["_exp_mv_eur"], errors="coerce") - pd.to_numeric(work["_mv_eur"], errors="coerce")
     denom = pd.to_numeric(work["_mv_eur"], errors="coerce").replace(0, np.nan)
     work["_value_gap_pct"] = (work["_value_gap_eur"] / denom) * 100.0
 
-    # Optional minutes filter inside the market opportunity view
+    # Optional minutes filter inside Moneyball (keeps the tool usable even when df is big)
     if mins_col and mins_col in work.columns:
         mins_num = pd.to_numeric(work[mins_col], errors="coerce").fillna(0.0)
         min_mins = st.slider(
-            "Minimum minutes",
+            "Minimum minutes (Moneyball)",
             min_value=0,
             max_value=int(np.nanmax(mins_num.values)) if np.isfinite(np.nanmax(mins_num.values)) else 0,
             value=0,
@@ -541,35 +517,16 @@ def render_moneyball_block(
     except Exception:
         df_sig = "na"
 
-    model_status = valuation_info.get("status", "unknown") if isinstance(valuation_info, dict) else "unknown"
-    rows_used = valuation_info.get("rows_used", 0) if isinstance(valuation_info, dict) else 0
-    features_used = valuation_info.get("features_used", []) if isinstance(valuation_info, dict) else []
-    model_weight = valuation_info.get("model_weight", 0.0) if isinstance(valuation_info, dict) else 0.0
-
-    st.caption(
-        f"Market cohort: {df_sig} | players: {len(work)} | KPIs used: {len(used_kpis)} | "
-        f"valuation model: {model_status} | training rows: {rows_used} | model weight: {model_weight:.2f}"
-    )
-
-    with st.expander("Valuation model notes", expanded=False):
-        st.markdown(
-            "The fair value estimate uses a robust log market value model. "
-            "It blends performance, age curve, minutes reliability, contract length, position group and league strength where those fields exist. "
-            "Low sample players are pulled back towards their positional market baseline."
-        )
-        if features_used:
-            st.write("Features used:")
-            st.write(features_used)
+    st.caption(f"Moneyball cohort signature: {df_sig} | rows: {len(work)} | KPIs used: {len(used_kpis)}")
 
     # Sort controls
     sort_mode = st.selectbox(
         "Sort by",
         options=[
-            "Best value opportunity",
-            "Most overvalued by model",
+            "Most undervalued (Expected minus Actual)",
+            "Most overvalued (Actual minus Expected)",
             "Best performance score",
             "Lowest market value",
-            "Highest confidence opportunity",
         ],
         index=0,
         key=f"{key_prefix}_mb_sort",
@@ -586,14 +543,12 @@ def render_moneyball_block(
 
     work2 = work.copy()
 
-    if sort_mode == "Best value opportunity":
-        work2 = work2.sort_values(["_value_gap_eur", "_valuation_confidence_score", "_perf_z"], ascending=[False, False, False])
-    elif sort_mode == "Most overvalued by model":
+    if sort_mode == "Most undervalued (Expected minus Actual)":
+        work2 = work2.sort_values("_value_gap_eur", ascending=False)
+    elif sort_mode == "Most overvalued (Actual minus Expected)":
         work2 = work2.sort_values("_value_gap_eur", ascending=True)
     elif sort_mode == "Best performance score":
         work2 = work2.sort_values("_perf_z", ascending=False)
-    elif sort_mode == "Highest confidence opportunity":
-        work2 = work2.sort_values(["_valuation_confidence_score", "_value_gap_eur", "_perf_z"], ascending=[False, False, False])
     else:
         work2 = work2.sort_values("_mv_eur", ascending=True)
 
@@ -612,46 +567,19 @@ def render_moneyball_block(
     if mins_col and mins_col in work2.columns:
         display_cols.append(mins_col)
 
-    display_cols += [
-        "_mv_eur",
-        "_exp_mv_eur",
-        "_fair_low_eur",
-        "_fair_high_eur",
-        "_value_gap_eur",
-        "_value_gap_pct",
-        "_perf_z",
-        "_contract_months",
-        "_valuation_confidence",
-    ]
+    display_cols += ["_mv_eur", "_exp_mv_eur", "_value_gap_eur", "_value_gap_pct", "_perf_z", "_contract_months"]
 
     disp = work2.loc[:, [c for c in display_cols if c in work2.columns]].head(int(top_n)).copy()
 
     rename_map = {
         "_mv_eur": "Actual MV (EUR)",
-        "_exp_mv_eur": "Model fair value (EUR)",
-        "_fair_low_eur": "Fair value low (EUR)",
-        "_fair_high_eur": "Fair value high (EUR)",
-        "_value_gap_eur": "Opportunity gap (EUR)",
-        "_value_gap_pct": "Opportunity gap (%)",
-        "_perf_z": "Performance score",
+        "_exp_mv_eur": "Expected MV (EUR)",
+        "_value_gap_eur": "Value gap (EUR)",
+        "_value_gap_pct": "Value gap (%)",
+        "_perf_z": "Perf score (z)",
         "_contract_months": "Contract months",
-        "_valuation_confidence": "Model confidence",
     }
     disp = disp.rename(columns=rename_map)
-
-    currency_cols = [
-        "Actual MV (EUR)",
-        "Model fair value (EUR)",
-        "Fair value low (EUR)",
-        "Fair value high (EUR)",
-        "Opportunity gap (EUR)",
-    ]
-    for c in currency_cols:
-        if c in disp.columns:
-            disp[c] = pd.to_numeric(disp[c], errors="coerce").round(0).astype("Int64")
-    for c in ["Opportunity gap (%)", "Performance score", "Contract months"]:
-        if c in disp.columns:
-            disp[c] = pd.to_numeric(disp[c], errors="coerce").round(2)
 
     st.dataframe(disp, use_container_width=True, hide_index=True)
 
@@ -699,18 +627,10 @@ def render_moneyball_block(
             mv0 = float(pd.to_numeric(tr0.get("_mv_eur"), errors="coerce"))
             exp0 = float(pd.to_numeric(tr0.get("_exp_mv_eur"), errors="coerce"))
             gap0 = float(pd.to_numeric(tr0.get("_value_gap_eur"), errors="coerce"))
-            low0 = float(pd.to_numeric(tr0.get("_fair_low_eur"), errors="coerce")) if "_fair_low_eur" in tr0.index else np.nan
-            high0 = float(pd.to_numeric(tr0.get("_fair_high_eur"), errors="coerce")) if "_fair_high_eur" in tr0.index else np.nan
-            conf0 = str(tr0.get("_valuation_confidence", "") or "").strip()
-
-            c1, c2, c3, c4 = st.columns(4)
+            c1, c2, c3 = st.columns(3)
             c1.metric("Actual MV (EUR)", f"{mv0:,.0f}" if np.isfinite(mv0) else "na")
-            c2.metric("Model fair value (EUR)", f"{exp0:,.0f}" if np.isfinite(exp0) else "na")
-            if np.isfinite(low0) and np.isfinite(high0):
-                c3.metric("Fair value range", f"{low0:,.0f} to {high0:,.0f}")
-            else:
-                c3.metric("Fair value range", "na")
-            c4.metric("Opportunity gap (EUR)", f"{gap0:,.0f}" if np.isfinite(gap0) else "na", help=f"Model confidence: {conf0 or 'na'}")
+            c2.metric("Expected MV (EUR)", f"{exp0:,.0f}" if np.isfinite(exp0) else "na")
+            c3.metric("Value gap (EUR)", f"{gap0:,.0f}" if np.isfinite(gap0) else "na")
 
         # Radar
         if "go" in globals() and go is not None:
@@ -725,16 +645,30 @@ def render_moneyball_block(
         else:
             st.info("Plotly is not available, so the KPI radar is disabled.")
     else:
-        st.info("No KPI columns available after validation.")
+        st.info("No KPI columns available for Moneyball after validation.")
 
 
 def _debug_moneyball_inputs(tag: str, df, kpis: list[str]):
-    return None
+    st.markdown(f"#### Moneyball debug: {tag}")
+    st.write("df is None:", df is None)
+    if df is not None:
+        st.write("shape:", df.shape)
+        st.write("columns (first 40):", list(df.columns)[:40])
+
+        mv_candidates = ["Market value", "Market Value", "MV", "Transfermarkt value"]
+        mv_col = next((c for c in mv_candidates if c in df.columns), None)
+        st.write("market value column:", mv_col)
+
+        if mv_col:
+            st.write("mv sample:", df[mv_col].astype(str).head(8).tolist())
+
+    st.write("kpi count:", len(kpis))
+    st.write("kpis (first 25):", kpis[:25])
 
 #--------------------------------------------------------------------------------
-# ---- Emerging talent helpers ---- ----
+# ---- U21 emergence helpers ---- ----
 def render_u21_emergence_block_from_df(st, df_in: pd.DataFrame, key_prefix: str, export_buttons):
-    st.subheader("Emerging Talent View")
+    st.subheader("U21 development")
 
     if df_in is None or df_in.empty:
         st.info("No data in this cohort.")
@@ -997,7 +931,6 @@ def render_u21_emergence_block_from_df(st, df_in: pd.DataFrame, key_prefix: str,
         .properties(height=30 * len(chart_data), width="container")
     )
     st.altair_chart(chart, use_container_width=True)
-    st.caption("Chart ranks emerging players by the selected development score within the current peer group.")
 
     st.markdown("#### U21 ranking table")
     df_rank["_mins_raw"] = df_rank["_mins"]
@@ -1015,6 +948,7 @@ def render_u21_emergence_block_from_df(st, df_in: pd.DataFrame, key_prefix: str,
         "EmergenceIndex",
     ]
     st.dataframe(df_rank[display_cols], use_container_width=True, hide_index=True)
+    export_buttons(df_rank[display_cols], key_suf=f"_{key_prefix}_u21_emergence")
 
 #--------------------------------------------------------------------------------
 # ---- Budget alternatives from similarity helpers ---- ----    
@@ -1036,6 +970,7 @@ def render_budget_alternatives_block_from_similarity(
 
     df = candidates_df.copy()
 
+    # Pick which score to value (use stage 2 if present)
     score_options = []
     if "RTR_Sim" in df.columns:
         score_options.append("RTR_Sim")
@@ -1054,29 +989,31 @@ def render_budget_alternatives_block_from_similarity(
         key=f"{key_prefix}_score_col",
     )
 
+    # Market value column
+    mv_series = None
     if "_mv_eur" in df.columns:
         mv_series = pd.to_numeric(df["_mv_eur"], errors="coerce")
     else:
-        mv_col = next((c for c in df.columns if str(c).lower() in {"market value", "market_value", "mv"}), None)
+        mv_col = next((c for c in df.columns if c.lower() in {"market value", "market_value", "mv"}), None)
         if mv_col is None:
             st.info("No market value column found for budget alternatives.")
             return
-        parser = globals().get("_mb_parse_value_eur")
-        if callable(parser):
-            mv_series = df[mv_col].apply(parser)
-        else:
-            mv_str = df[mv_col].astype(str).str.replace(r"[^\d.]", "", regex=True)
-            mv_series = pd.to_numeric(mv_str, errors="coerce")
+        mv_str = df[mv_col].astype(str).str.replace(r"[^\d.]", "", regex=True)
+        mv_series = pd.to_numeric(mv_str, errors="coerce")
 
-    df["_mv_eur"] = pd.to_numeric(mv_series, errors="coerce")
+    df["_mv_eur"] = mv_series
     df["_mv_eur"] = df["_mv_eur"].where(df["_mv_eur"] > 0)
-    df["_score"] = pd.to_numeric(df[score_col], errors="coerce").replace([np.inf, -np.inf], np.nan)
 
-    col_player = "Player" if "Player" in df.columns else next((c for c in df.columns if str(c).lower() == "player"), "Player")
-    col_team = "Team" if "Team" in df.columns else next((c for c in df.columns if str(c).lower() == "team"), "Team")
+    # Score numeric
+    df["_score"] = pd.to_numeric(df[score_col], errors="coerce")
+
+    # Basic columns for display
+    col_player = "Player" if "Player" in df.columns else next((c for c in df.columns if c.lower() == "player"), "Player")
+    col_team = "Team" if "Team" in df.columns else next((c for c in df.columns if c.lower() == "team"), "Team")
     col_age = "Age" if "Age" in df.columns else None
     col_mins = "Minutes" if "Minutes" in df.columns else ("Minutes played" if "Minutes played" in df.columns else None)
 
+    # Budget controls
     mv_max = df["_mv_eur"].max(skipna=True)
     if pd.isna(mv_max) or mv_max <= 0:
         st.info("Market values are missing or zero, cannot build budget alternatives.")
@@ -1113,42 +1050,47 @@ def render_budget_alternatives_block_from_similarity(
         key=f"{key_prefix}_top_n",
     )
 
+    # Remove the target itself
     t_name = str(target_row.get(col_player, target_row.get("Player", ""))).strip()
     t_team = str(target_row.get(col_team, target_row.get("Team", ""))).strip()
 
     is_target = (df[col_player].astype(str).str.strip() == t_name) & (df[col_team].astype(str).str.strip() == t_team)
     df = df[~is_target].copy()
 
-    model_pool = df[df["_mv_eur"].notna() & df["_score"].notna()].copy()
-    if model_pool.empty:
-        st.info("No players with both market value and score found.")
-        return
-
-    value_model = globals().get("_mb_apply_professional_value_model")
-    if callable(value_model):
-        model_pool, valuation_info = value_model(model_pool, perf_col="_score")
-    else:
-        baseline = float(model_pool["_mv_eur"].median(skipna=True))
-        model_pool["_fair_mv_eur"] = baseline
-        model_pool["_fair_low_eur"] = baseline * 0.70
-        model_pool["_fair_high_eur"] = baseline * 1.30
-        model_pool["_valuation_confidence"] = "Low"
-        valuation_info = {"status": "fallback", "rows_used": len(model_pool), "features_used": []}
-
-    model_pool["_exp_mv_eur"] = pd.to_numeric(model_pool.get("_fair_mv_eur"), errors="coerce")
-    model_pool["_value_gap_eur"] = model_pool["_exp_mv_eur"] - model_pool["_mv_eur"]
-    model_pool["_value_ratio"] = model_pool["_exp_mv_eur"] / model_pool["_mv_eur"].replace(0, np.nan)
-
-    rows_used = valuation_info.get("rows_used", 0) if isinstance(valuation_info, dict) else 0
-    model_status = valuation_info.get("status", "unknown") if isinstance(valuation_info, dict) else "unknown"
-    st.caption(f"Budget valuation model: {model_status} | training rows: {rows_used}")
-
-    df = model_pool[(model_pool["_mv_eur"] <= budget_max) & (model_pool["_score"] >= score_thr)].copy()
+    # Budget filter + score threshold
+    df = df[df["_mv_eur"].notna() & df["_score"].notna()].copy()
+    df = df[(df["_mv_eur"] <= budget_max) & (df["_score"] >= score_thr)].copy()
 
     if df.empty:
         st.info("No players match the budget and minimum score filters.")
         return
 
+    # Moneyball: expected MV from score vs MV relationship (log space)
+    y = np.log(df["_mv_eur"].to_numpy(dtype="float64"))
+    x = df["_score"].to_numpy(dtype="float64")
+
+    # z score x to stabilise fit
+    x_mu = np.nanmean(x)
+    x_sd = np.nanstd(x)
+    if not np.isfinite(x_sd) or x_sd == 0:
+        xz = x * 0.0
+    else:
+        xz = (x - x_mu) / x_sd
+
+    valid = np.isfinite(xz) & np.isfinite(y)
+    if valid.sum() < 8:
+        # fallback: simple ratio baseline
+        baseline = np.nanmedian(df["_mv_eur"].to_numpy(dtype="float64"))
+        df["_exp_mv_eur"] = baseline
+    else:
+        b1, b0 = np.polyfit(xz[valid], y[valid], 1)
+        y_hat = (b1 * xz) + b0
+        df["_exp_mv_eur"] = np.exp(y_hat)
+
+    df["_value_gap_eur"] = df["_exp_mv_eur"] - df["_mv_eur"]
+    df["_value_ratio"] = df["_exp_mv_eur"] / df["_mv_eur"]
+
+    # Blend: similarity first, then value (keeps “budget version” logic)
     def _z(s: "pd.Series") -> "pd.Series":
         m = s.mean(skipna=True)
         sd = s.std(skipna=True)
@@ -1156,50 +1098,28 @@ def render_budget_alternatives_block_from_similarity(
             return s * 0.0
         return (s - m) / sd
 
-    confidence_score = pd.to_numeric(df.get("_valuation_confidence_score", pd.Series(50.0, index=df.index)), errors="coerce").fillna(50.0)
-    df["_budget_match_score"] = (
-        0.60 * _z(df["_score"])
-        + 0.25 * _z(df["_value_ratio"])
-        + 0.15 * _z(confidence_score)
-    )
+    df["_budget_match_score"] = (0.7 * _z(df["_score"])) + (0.3 * _z(df["_value_ratio"]))
 
-    df = df.sort_values(
-        ["_budget_match_score", "_score", "_value_ratio", "_valuation_confidence_score"],
-        ascending=[False, False, False, False],
-    ).head(top_n)
+    df = df.sort_values(["_budget_match_score", "_score", "_value_ratio"], ascending=[False, False, False]).head(top_n)
 
     show_cols = [col_player, col_team]
-    if col_age:
-        show_cols.append(col_age)
-    if col_mins:
-        show_cols.append(col_mins)
+    if col_age: show_cols.append(col_age)
+    if col_mins: show_cols.append(col_mins)
     show_cols += [score_col]
 
     df_out = df.copy()
     df_out["Market value (€)"] = df_out["_mv_eur"].round(0).astype("Int64")
-    df_out["Model fair value (€)"] = df_out["_exp_mv_eur"].round(0).astype("Int64")
-    df_out["Fair range low (€)"] = pd.to_numeric(df_out.get("_fair_low_eur"), errors="coerce").round(0).astype("Int64")
-    df_out["Fair range high (€)"] = pd.to_numeric(df_out.get("_fair_high_eur"), errors="coerce").round(0).astype("Int64")
-    df_out["Opportunity gap (€)"] = df_out["_value_gap_eur"].round(0).astype("Int64")
+    df_out["Expected MV (€)"] = df_out["_exp_mv_eur"].round(0).astype("Int64")
+    df_out["Value gap (€)"] = df_out["_value_gap_eur"].round(0).astype("Int64")
     df_out["Value ratio"] = df_out["_value_ratio"].round(2)
     df_out["Budget match"] = df_out["_budget_match_score"].round(2)
-    if "_valuation_confidence" in df_out.columns:
-        df_out["Model confidence"] = df_out["_valuation_confidence"].astype(str)
-    else:
-        df_out["Model confidence"] = "Medium"
 
-    final_cols = show_cols + [
-        "Market value (€)",
-        "Model fair value (€)",
-        "Fair range low (€)",
-        "Fair range high (€)",
-        "Opportunity gap (€)",
-        "Value ratio",
-        "Budget match",
-        "Model confidence",
-    ]
+    final_cols = show_cols + ["Market value (€)", "Expected MV (€)", "Value gap (€)", "Value ratio", "Budget match"]
 
     st.dataframe(df_out[final_cols], use_container_width=True, hide_index=True)
+
+    if export_buttons is not None:
+        export_buttons(df_out[final_cols], key_suf=f"_{key_prefix}_budget_alts")
 
 
 #--------------------------------------------------------------------------------
@@ -1406,7 +1326,7 @@ def render_weakness_visuals(gap_payload):
     if not gap_payload:
         return
 
-    st.markdown("### Risk and Gap Analysis")
+    st.markdown("### 🚩 Risk & Gap Analysis")
 
     # Unpack payload
     mins = gap_payload.get("mins", 0)
@@ -1420,15 +1340,15 @@ def render_weakness_visuals(gap_payload):
     if major_gaps_count >= 3:
         status_color = "error" # Red
         status_msg = f"HIGH RISK: {major_gaps_count} Major Statistical Deficits Detected"
-        icon = "High risk"
+        icon = "🛑"
     elif major_gaps_count >= 1:
         status_color = "warning" # Yellow
         status_msg = f"MODERATE RISK: {major_gaps_count} Major Statistical Deficits Detected"
-        icon = "Moderate risk"
+        icon = "⚠️"
     else:
         status_color = "success" # Green
         status_msg = "LOW RISK: No major statistical deficits > 15% detected"
-        icon = "Low risk"
+        icon = "✅"
 
     # Display the status alert
     if status_color == "error":
@@ -1447,7 +1367,7 @@ def render_weakness_visuals(gap_payload):
     
     with c2:
         # 3. The Details (Tabs for Gaps vs Responsibilities)
-        tab_gaps, tab_resp = st.tabs(["KPI Deficits", "Baseline Failures"])
+        tab_gaps, tab_resp = st.tabs(["📉 KPI Deficits (Specific)", "⚠️ Baseline Failures (General)"])
         
         with tab_gaps:
             if not df_gaps.empty:
@@ -1472,7 +1392,7 @@ def render_weakness_visuals(gap_payload):
                 for _, row in df_resp.iterrows():
                     resp = row.get('Responsibility', '')
                     pct = row.get('Pct', 0)
-                    st.markdown(f"**{resp}**: Only better than {pct:.0f}% of peers.")
+                    st.markdown(f"- 🔴 **{resp}**: Only better than {pct:.0f}% of peers.")
             else:
                 st.info("Player meets baseline standards (Top 50%) for all positional responsibilities.")
 
@@ -1481,7 +1401,7 @@ def render_season_trend_block(current_row, kpis, wys_root_func):
     """
     Renders the 24/25 vs Current Season comparison.
     """
-    st.markdown("### Previous Season Trends")
+    st.markdown("### 📅 Previous Season Trends (24/25)")
     
     # 1. Locate 24/25 Data
     # Assuming sibling folder structure: "Scouting Workspace/25 26" and "Scouting Workspace/24 25"
@@ -1498,13 +1418,13 @@ def render_season_trend_block(current_row, kpis, wys_root_func):
             break
             
     if not prev_path:
-        st.caption("Previous season folder not found in the scouting directory.")
+        st.caption("🚫 Previous season folder (24/25) not found in the scouting directory.")
         return
 
     df_prev = _load_prev_season_master(prev_path)
     
     if df_prev.empty:
-        st.caption("No data found inside the previous season folder.")
+        st.caption("🚫 No data found inside the 24/25 folder.")
         return
 
     # 2. Match the Player
@@ -1536,9 +1456,9 @@ def render_season_trend_block(current_row, kpis, wys_root_func):
         
         # Stability Analysis text
         if prev_mins > 900 and cur_mins > 900:
-            st.markdown("**Sample status:** High reliability (full data for both seasons)")
+            st.markdown("**Sample Status:** ✅ High Reliability (Full data for both seasons)")
         elif prev_mins < 500:
-            st.markdown("**Sample status:** Low historical sample (<500 mins)")
+            st.markdown("**Sample Status:** ⚠️ Low historical sample (<500 mins)")
 
     with c2:
         # Radar Overlay (Current vs Previous)
@@ -1593,8 +1513,6 @@ def render_season_trend_block(current_row, kpis, wys_root_func):
             legend=dict(orientation="h", yanchor="bottom", y=1.02)
         )
         st.plotly_chart(fig, use_container_width=True)
-        st.caption("Radar shows player percentile strengths against the selected peer group.")
-        st.caption("Chart shows how the selected player scores across the relevant role KPIs.")
 
     # 4. Metric Delta Table
     st.markdown("**Metric Evolution (Raw Per 90)**")
@@ -1608,7 +1526,7 @@ def render_season_trend_block(current_row, kpis, wys_root_func):
         if pd.notna(vc) and pd.notna(vp) and vp != 0:
             diff = vc - vp
             pct_change = (diff / abs(vp)) * 100
-            trend = "Up" if diff > 0 else "Down"
+            trend = "📈" if diff > 0 else "📉"
             # Invert trend icon for negative metrics like "Fouls" if needed, keeping simple for now
             
             delta_data.append({
@@ -2038,6 +1956,107 @@ def render_search_by_position_panel(
         pool = pool[m >= float(min_mins)]
 
     pool = pool.reset_index(drop=True)
+
+    with st.expander("Position matching debug", expanded=False):
+        st.write(
+            {
+                "selected_positions": selected_pos_codes,
+                "expanded_eligible_positions": [p for p in WS_POS_ORDER if p in eligible],
+                "rows_after_position_filter": int(len(pool)),
+            }
+        )
+        show_cols = [c for c in [player_col, team_col, pos_col, "__matched_positions"] if c and c in pool.columns]
+        if show_cols:
+            st.dataframe(pool[show_cols].head(40), use_container_width=True, hide_index=True)
+
+    with st.expander("Tier normalisation debug", expanded=False):
+        st.write("use_tier_norm:", bool(use_tier_norm))
+        st.write("Detected league column:", league_key_col)
+
+        if not league_key_col:
+            st.warning("No league column found. Tier mapping cannot run.")
+        else:
+            dbg = pool.copy()
+
+            dbg["_league_key"] = (
+                dbg[league_key_col]
+                .fillna("")
+                .astype(str)
+                .str.replace("\u00a0", " ", regex=False)
+                .str.strip()
+            )
+            dbg["_league_key"] = dbg["_league_key"].replace(
+                {"": "Unknown", "nan": "Unknown", "None": "Unknown"}
+            )
+
+            dbg["_tier_label"] = dbg["_league_key"].apply(_tier_label_from_league_key)
+            dbg["_coef"] = dbg["_tier_label"].apply(lambda x: float(tier_strength_coef(str(x))))
+
+            def _split_league_key(k: str) -> tuple[str, str]:
+                if not k or k == "Unknown":
+                    return ("Unknown", "")
+                if " T" in k:
+                    a, b = k.rsplit(" T", 1)
+                    return (a.strip(), f"T{b.strip()}")
+                return (k.strip(), "")
+
+            nation_tier = dbg["_league_key"].apply(_split_league_key)
+            dbg["_nation"] = nation_tier.apply(lambda x: x[0])
+            dbg["_tier_code"] = nation_tier.apply(lambda x: x[1])
+
+            league_summary = (
+                dbg.groupby(["_league_key", "_nation", "_tier_code", "_tier_label", "_coef"], dropna=False)
+                .size()
+                .reset_index(name="n_players")
+                .sort_values("n_players", ascending=False)
+                .reset_index(drop=True)
+            )
+            st.markdown("##### League key to tier label to coefficient")
+            st.dataframe(league_summary, use_container_width=True, hide_index=True)
+
+            mapped_keys = set(LEAGUE_TIER_LABEL.keys()) if isinstance(LEAGUE_TIER_LABEL, dict) else set()
+            league_summary["_is_unknown_key"] = (~league_summary["_league_key"].isin(mapped_keys)) | (
+                league_summary["_league_key"] == "Unknown"
+            )
+            unknown_keys_df = league_summary[league_summary["_is_unknown_key"]].copy()
+
+            st.markdown("##### Unknown league keys")
+            st.write("Unknown key count:", int(len(unknown_keys_df)))
+            if len(unknown_keys_df):
+                st.dataframe(
+                    unknown_keys_df[["_league_key", "_tier_label", "_coef", "n_players"]],
+                    use_container_width=True,
+                    hide_index=True,
+                )
+
+                show_cols = []
+                for c in [player_col, team_col, league_key_col, pos_col, age_col, mins_col]:
+                    if c and c in dbg.columns and c not in show_cols:
+                        show_cols.append(c)
+
+                st.markdown("##### Example player rows from unknown league keys")
+                st.dataframe(
+                    dbg[dbg["_league_key"].isin(set(unknown_keys_df["_league_key"]))][show_cols].head(30),
+                    use_container_width=True,
+                    hide_index=True,
+                )
+
+            tier_summary = (
+                dbg.groupby(["_tier_label", "_coef"], dropna=False)
+                .size()
+                .reset_index(name="n_players")
+                .sort_values("n_players", ascending=False)
+                .reset_index(drop=True)
+            )
+            st.markdown("##### Tier labels currently used in this filtered pool")
+            st.dataframe(tier_summary, use_container_width=True, hide_index=True)
+
+            suspicious = tier_summary[tier_summary["_coef"].isin([0.50])]
+            if len(suspicious):
+                st.warning(
+                    "Some tier labels are returning coefficient 0.50, which usually means the tier label is not in TIER_STRENGTH."
+                )
+                st.dataframe(suspicious, use_container_width=True, hide_index=True)
 
     if pool.empty:
         st.info("No players found after filters.")
@@ -2499,7 +2518,18 @@ def parse_date_any(s: str) -> pd.Timestamp | pd.NaT:
 
     
 def export_buttons(df_view: pd.DataFrame, key_suf: str = ""):
-    return None
+    c1, c2 = st.columns(2)
+    c1.download_button("Download CSV", data=df_view.to_csv(index=False).encode("utf-8"),
+                       file_name=f"export{key_suf}.csv", mime="text/csv")
+    try:
+        with pd.ExcelWriter(io.BytesIO(), engine="xlsxwriter") as w:
+            df_view.to_excel(w, index=False, sheet_name="Sheet1")
+            data = w.book.filename.getvalue()  # type: ignore
+        c2.download_button("Download Excel", data=data,
+                           file_name=f"export{key_suf}.xlsx",
+                           mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    except Exception:
+        st.caption("Install xlsxwriter for Excel export. CSV export always works.")
 
 #-------End of utility functions-------
 
@@ -3106,7 +3136,7 @@ def render_player_comparison_tab(*, nation_dirs: list[str], key_prefix: str = "c
             ),
             showlegend=True,
             margin=dict(l=40, r=40, t=40, b=40),
-            height=460,
+            height=520,
         )
 
         st.plotly_chart(fig, use_container_width=True)
@@ -3645,7 +3675,7 @@ def render_analysis_block(
 
     view = df_all.copy()
     # -----------------------------
-    # Expose current cohort and KPI set for other blocks
+    # Expose current cohort + KPI set for other blocks (Moneyball, graphs, etc.)
     # -----------------------------
     if "feat_cols" not in locals():
         feat_cols = []
@@ -3784,10 +3814,10 @@ def render_analysis_block(
     out["Rank"] = out["Score"].rank(ascending=False, method="min")
     out = out.sort_values(["Rank", "Score"], ascending=[True, False])
 
-    with st.expander("Detailed ranking table", expanded=False):
-        st.dataframe(out, use_container_width=True, hide_index=True)
+    st.dataframe(out, use_container_width=True, hide_index=True)
+    export_buttons(out, key_suf=f"_{key_prefix}_analysis_raw")
 
-    # Optional emerging talent view for this cohort
+    # Optional Marc Lamberts style U21 emergence view for this cohort
     render_u21_emergence_block(df_all, view, key_prefix)
 
 def render_u21_emergence_block(
@@ -3796,14 +3826,14 @@ def render_u21_emergence_block(
     key_prefix: str,
 ) -> None:
     """
-    Emerging talent view for the current cohort.
+    Marc Lamberts style U21 emergence view for the current cohort.
 
     df_all      = full dataset for this league selection (before filters)
     df_filtered = already filtered view used for the main table
     key_prefix  = same key_prefix as the league tab (for Streamlit keys)
     """
     st.markdown("----")
-    with st.expander("Emerging Talent View", expanded=False):
+    with st.expander("U21 emergence check", expanded=False):
         if df_filtered.empty:
             st.info("No data in the current cohort.")
             st.stop()
@@ -4075,7 +4105,6 @@ def render_u21_emergence_block(
             .properties(height=30 * len(chart_data), width="container")
         )
         st.altair_chart(chart, use_container_width=True)
-        st.caption("Chart shows the selected KPI distribution across the current comparison group.")
 
         st.markdown("#### U21 ranking table for this cohort")
         df_rank["_mins_raw"] = df_rank["_mins"]
@@ -4172,7 +4201,7 @@ def render_data_analysis_page(
     _sanitize_defaults,
 ) -> None:
     """
-    Public entry point that the main app calls for the recruitment data workspace.
+    Public entry point that the main app calls when nav == '📊 Data analysis'.
     All heavy analysis helpers are supplied from the main module.
     """
    
@@ -4283,15 +4312,15 @@ def render_data_analysis_page(
     # NATION SELECTION PANEL
     # -------------------------------------------------------------------
     nation_names = [os.path.basename(p) for p in nation_dirs]
-    tab_labels = ["League context", "Player Benchmarking", "Player profile", "Player comparison", "Position search", "Team analysis"]
+    tab_labels = ["League context", "Data visualiser", "Player profile", "Player comparison", "Position search", "Team analysis"]
     
     jump_to = st.session_state.get("da_jump_to")
 
     if jump_to == "search":
         st.session_state["da_jump_to"] = None
 
-        # Optional: a simple way back to the full Recruitment Data Workspace layout
-        if st.button("Back to Recruitment Data Workspace"):
+        # Optional: a simple way back to the full Data analysis layout
+        if st.button("Back to Data analysis"):
             st.rerun()
 
         # Render the exact same profile view as your Search tab
@@ -4453,25 +4482,30 @@ def render_data_analysis_page(
                     
                     #----------------------------------------------
                     # -----------------------------
-                    # Market Opportunity Shortlist uses the cohort built inside render_analysis_block
+                    # Moneyball (uses the cohort built inside render_analysis_block)
                     # -----------------------------
                     cohort_view = st.session_state.get(f"multi_{SUF}__cohort_view", None)
                     kpi_cols = st.session_state.get(f"multi_{SUF}__kpi_cols", [])
 
                     if cohort_view is not None and hasattr(cohort_view, "empty") and (not cohort_view.empty) and kpi_cols:
-                        with st.expander("Market Opportunity Shortlist", expanded=False):
+                        _debug_moneyball_inputs("Leagues tab", cohort_view, kpi_cols)
+                        with st.expander("Moneyball", expanded=False):
                             try:
                                 render_moneyball_block(
                                     df=cohort_view,
                                     kpi_cols=kpi_cols,
                                     metric_direction=metric_direction,
-                                    title=f"Market Opportunity Shortlist ({label})",
+                                    title=f"Moneyball shortlist ({label})",
                                     key_prefix=f"multi_{SUF}_moneyball_leagues",
                                 )
                             except Exception as e:
                                 st.exception(e)
+                                st.write("DEBUG cohort shape:", getattr(cohort_view, "shape", None))
+                                st.write("DEBUG KPI count:", len(kpi_cols))
+                                st.write("DEBUG KPIs:", kpi_cols[:30])
+                                st.write("DEBUG columns sample:", list(cohort_view.columns)[:60])
                     else:
-                        st.caption("Run the analysis block above to generate the cohort and KPI set for Market Opportunity Shortlist.")
+                        st.caption("Run the analysis block above to generate the cohort and KPI set for Moneyball.")
 
 
                     # update league search history
@@ -4496,12 +4530,12 @@ def render_data_analysis_page(
 
 
     # 2) graphs tab uses all nations
-    with tab["Player Benchmarking"]:
+    with tab["Data visualiser"]:
         _render_data_tab_intro(
-            "Player Benchmarking",
+            "Data visualiser",
             "Turn selected KPIs into visual outlier checks. Use this when you want a quick picture of who separates from the market before opening profiles.",
         )
-        st.subheader("Player Benchmarking")
+        st.subheader("Visual lab")
 
         _ = st.checkbox(
             "Adjust for league strength (ClubElo)",
@@ -4608,7 +4642,7 @@ def render_data_analysis_page(
 
             with leagues_col:
                 sel_divs = st.multiselect(
-                    "Peer leagues and tiers",
+                    "Peer Leagues / Tiers for Visual Lab",
                     options=div_options,
                     key=ms_key,
                 )
@@ -4838,7 +4872,7 @@ def render_data_analysis_page(
 
         visual_modes = ["Quadrant matrix", "Distribution view", "Outlier scatter"]
         visual_mode = st.radio(
-            "Player Benchmarking",
+            "Visual lab",
             visual_modes,
             index=0,
             horizontal=True,
@@ -5145,8 +5179,9 @@ def render_data_analysis_page(
                 st.info("No ranking table available for the selected KPI set.")
                 return
 
-            with st.expander("Ranking table", expanded=False):
-                st.dataframe(rank_table, use_container_width=True, hide_index=True)
+            st.markdown("### Ranking table")
+            st.dataframe(rank_table, use_container_width=True, hide_index=True)
+            export_buttons(rank_table, key_suf=key_suf)
 
         def _render_two_axis_visual(
             *,
@@ -5322,7 +5357,7 @@ def render_data_analysis_page(
                 )
 
                 st.markdown(f"#### {metric}")
-                st.altair_chart((box + dots).properties(height=340), use_container_width=True)
+                st.altair_chart((box + dots).properties(height=390), use_container_width=True)
 
                 higher_is_better = _metric_is_higher_better(metric)
                 rank_cols = [c for c in [COL_PLAYER, COL_TEAM, "Age", "__league_key", "Position"] if c in dfd.columns]
@@ -5331,8 +5366,8 @@ def render_data_analysis_page(
                 table.insert(0, "Rank", range(1, len(table) + 1))
                 table = table.rename(columns={"__metric_value": metric})
 
-                with st.expander("Best ranked players", expanded=False):
-                    st.dataframe(table.head(30), use_container_width=True, hide_index=True)
+                st.markdown("##### Best ranked players")
+                st.dataframe(table.head(30), use_container_width=True, hide_index=True)
 
             _record_visual_history()
 
@@ -5373,13 +5408,18 @@ def render_data_analysis_page(
             _render_two_axis_visual(show_quadrants=False, allow_trend=True)
 
         if kpG:
-            with st.expander("Emerging Talent View", expanded=False):
+            with st.expander("U21 emergence (Visual Lab)", expanded=False):
                 try:
+                    st.write("DEBUG dfV shape:", dfV.shape)
+                    if "Age" in dfV.columns:
+                        ages_tmp = pd.to_numeric(dfV["Age"], errors="coerce")
+                        st.write("DEBUG U21 count (17 to 23):", int(((ages_tmp >= 17) & (ages_tmp <= 23)).sum()))
+
                     render_u21_emergence_block_from_df(
                         st,
                         df_in=dfV,
                         key_prefix=f"g_{SUF}_u21",
-                        export_buttons=None,
+                        export_buttons=export_buttons,
                     )
                 except Exception as e:
                     st.exception(e)
@@ -5390,73 +5430,115 @@ def render_data_analysis_page(
                 dfV = dfV.copy()
                 dfV["League"] = dfV["__league_key"]
 
-            with st.expander("Market Opportunity Shortlist", expanded=False):
+            with st.expander("Moneyball debug", expanded=False):
+                _debug_moneyball_inputs("Visual Lab", dfV, kpi_cols_graph)
+
+            with st.expander("Moneyball (Visual Lab)", expanded=False):
                 try:
                     render_moneyball_block(
                         df=dfV,
                         kpi_cols=kpi_cols_graph,
                         metric_direction=metric_direction,
-                        title="Market Opportunity Shortlist",
+                        title="Moneyball shortlist (Visual Lab)",
                         key_prefix=f"g_{SUF}_moneyball",
                     )
                 except Exception as e:
                     st.exception(e)
+                    st.write("DEBUG dfV shape:", getattr(dfV, "shape", None))
+                    st.write("DEBUG KPI count:", len(kpi_cols_graph))
+                    st.write("DEBUG KPIs:", kpi_cols_graph[:30])
+                    st.write("DEBUG columns sample:", list(dfV.columns)[:60])
 
-        if _admin_tools_enabled():
-            st.markdown("----")
-            st.markdown("### KPI Presets Manager")
+        # Preset manager stays here so it has access to pos_all and numeric_cols_G
+        st.markdown("----")
+        st.markdown("### KPI Presets Manager")
 
-            with st.expander("Create or edit KPI presets", expanded=False):
-                st.markdown("#### New preset")
-                ncol1, ncol2 = st.columns([2, 3])
-                new_name = ncol1.text_input(
-                    "Profile name",
-                    key="kp_new_name",
-                    placeholder="e.g. CF",
-                )
-                new_positions = ncol1.multiselect(
-                    "Positions for this profile",
-                    options=pos_all,
-                    key="kp_new_positions",
-                )
-                new_kpis = ncol2.multiselect(
-                    "KPIs for this profile",
-                    options=numeric_cols_G,
-                    key="kp_new_kpis",
-                )
-                new_notes = st.text_area(
-                    "Notes",
-                    key="kp_new_notes",
-                    placeholder="Role, age band, references…",
-                )
+        with st.expander("Create / Edit / Import / Export KPI presets", expanded=False):
+            st.markdown("#### New preset")
+            ncol1, ncol2 = st.columns([2, 3])
+            new_name = ncol1.text_input(
+                "Profile name",
+                key="kp_new_name",
+                placeholder="e.g. 9 / 9A (CF)",
+            )
+            new_positions = ncol1.multiselect(
+                "Positions for this profile",
+                options=pos_all,
+                key="kp_new_positions",
+            )
+            new_kpis = ncol2.multiselect(
+                "KPIs for this profile",
+                options=numeric_cols_G,
+                key="kp_new_kpis",
+            )
+            new_notes = st.text_area(
+                "Notes (optional)",
+                key="kp_new_notes",
+                placeholder="Role, age band, references…",
+            )
 
-                if st.button("Save new preset", type="primary", key="kp_save_new"):
-                    if not new_name.strip():
-                        st.warning("Give the preset a name.")
-                    elif not new_kpis:
-                        st.warning("Choose at least one KPI.")
+            if st.button("Save new preset", type="primary", key="kp_save_new"):
+                if not new_name.strip():
+                    st.warning("Give the preset a name.")
+                elif not new_kpis:
+                    st.warning("Choose at least one KPI.")
+                else:
+                    dfp = _load_presets()
+                    row = {
+                        "Profile": new_name.strip(),
+                        "KPIs": ", ".join(new_kpis),
+                        "Positions": ", ".join(new_positions),
+                        "Notes": new_notes,
+                    }
+                    mask = dfp["Profile"].astype(str).str.lower() == new_name.strip().lower()
+                    if mask.any():
+                        dfp.loc[mask, :] = row
                     else:
-                        dfp = _load_presets()
-                        row = {
-                            "Profile": new_name.strip(),
-                            "KPIs": " | ".join(new_kpis),
-                            "Positions": " | ".join(new_positions),
-                            "Notes": new_notes,
-                        }
-                        mask = dfp["Profile"].astype(str).str.lower() == new_name.strip().lower()
-                        if mask.any():
-                            dfp.loc[mask, :] = row
-                        else:
-                            dfp = pd.concat([dfp, pd.DataFrame([row])], ignore_index=True)
-                        _save_presets(dfp)
-                        st.success(f"Saved preset '{new_name}'.")
-                        st.cache_data.clear()
+                        dfp = pd.concat([dfp, pd.DataFrame([row])], ignore_index=True)
+                    _save_presets(dfp)
+                    st.success(f"Saved preset '{new_name}'.")
+                    st.cache_data.clear()
+                    st.experimental_rerun()
+
+            st.markdown("#### Existing presets")
+            dfp = _load_presets().copy()
+            st.dataframe(dfp, use_container_width=True, hide_index=True)
+
+            ecol1, ecol2, _ = st.columns([1, 1, 2])
+
+            csv_bytes = dfp.to_csv(index=False, encoding="utf-8-sig").encode("utf-8-sig")
+            ecol1.download_button(
+                "Export presets (CSV)",
+                data=csv_bytes,
+                file_name="Role_Profile_KPIs.csv",
+                mime="text/csv",
+                key="kp_export",
+            )
+
+            uploaded = ecol2.file_uploader(
+                "Import presets (CSV)",
+                type=["csv"],
+                key="kp_import",
+            )
+            if uploaded is not None:
+                try:
+                    content = uploaded.getvalue().decode("utf-8-sig", errors="ignore")
+                    newdf = pd.read_csv(io.StringIO(content), dtype=str).fillna("")
+                    required = {"Profile", "KPIs"}
+                    if not required.issubset(set(map(str, newdf.columns))):
+                        st.warning(
+                            "Invalid file: needs columns Profile, KPIs (Positions and Notes optional)."
+                        )
+                    else:
+                        for c in ["Positions", "Notes"]:
+                            if c not in newdf.columns:
+                                newdf[c] = ""
+                        _save_presets(newdf[["Profile", "KPIs", "Positions", "Notes"]])
+                        st.success("Imported presets.")
                         st.rerun()
-
-                st.markdown("#### Existing presets")
-                dfp = _load_presets().copy()
-                st.dataframe(dfp, use_container_width=True, hide_index=True)
-
+                except Exception as e:
+                    st.error(f"Failed to import: {e}")
+    
     with tab["Player profile"]:
         _render_data_tab_intro("Player profile", "Search one player, check his role relevant profile, compare him to the right cohort and move from raw data into scouting evidence.")
         _ = st.checkbox(
@@ -5703,9 +5785,25 @@ def render_player_search_tab(
             team_col = next((c for c in master_df.columns if str(c).lower() in {"team", "club", "squad"}), None)
 
             if name_col:
-                m = master_df[master_df[name_col].astype(str).str.strip().str.casefold() == player_plain.casefold()]
+                player_key = player_plain.casefold()
+                player_key_ascii = _strip_accents(player_plain).casefold()
+
+                name_series = master_df[name_col].astype(str).str.strip()
+                name_key = name_series.str.casefold()
+                name_key_ascii = name_series.map(_strip_accents).str.casefold()
+
+                m = master_df[(name_key == player_key) | (name_key_ascii == player_key_ascii)]
+
                 if team_plain and team_col and not m.empty:
-                    mt = m[m[team_col].astype(str).str.strip().str.casefold() == team_plain.casefold()]
+                    team_key = team_plain.casefold()
+                    team_key_ascii = _strip_accents(team_plain).casefold()
+
+                    team_series = m[team_col].astype(str).str.strip()
+                    team_match = (
+                        (team_series.str.casefold() == team_key)
+                        | (team_series.map(_strip_accents).str.casefold() == team_key_ascii)
+                    )
+                    mt = m[team_match]
                     if not mt.empty:
                         m = mt
 
@@ -6399,6 +6497,11 @@ def render_player_search_tab(
         st.warning("No position found for this player row. Check the Position column in the Wyscout master.")
         return
 
+    with st.expander("Debug info: profile key inference", expanded=False):
+        st.caption(
+            f"Profile debug: preset={sel_preset} → key={preset_profile_key} | "
+            f"player_first_pos={player_first_pos} | position_text_for_block={position_text_for_block}"
+        )
     
     render_player_type_and_responsibilities_blocks(
     cohort_df=cohort,
@@ -7123,20 +7226,16 @@ def render_player_search_tab(
                         current_player=sel_player,
                     )
 
-    #---------------- Budget alternatives ----------------
-    st.markdown("#### Budget alternatives")
-    
+    #---------------- Budget alternatives (Moneyball) ----------------
+    st.markdown("#### Budget alternatives (Moneyball)")
+    st.caption(f"Budget pool rows: {len(source_df)} | cols: {len(source_df.columns)}")
+
     # 1) Budget slider (uses the same df built by similarity)
     mv_col = "Market value" if "Market value" in source_df.columns else None
     if mv_col is None:
         st.info("Market value column not found in this pool.")
     else:
-        parser = globals().get("_mb_parse_value_eur")
-        if callable(parser):
-            mv = source_df[mv_col].apply(parser)
-        else:
-            mv = pd.to_numeric(source_df[mv_col], errors="coerce")
-        mv = pd.to_numeric(mv, errors="coerce")
+        mv = pd.to_numeric(source_df[mv_col], errors="coerce")
         mv = mv.where(mv > 0)
 
         if mv.notna().any():
@@ -7158,13 +7257,38 @@ def render_player_search_tab(
             if df_budget.empty:
                 st.info("No players match the budget filter.")
             else:
-                # 2) Same shortlist renderer used across the workspace
+                # 2) Exact Moneyball renderer (same as Leagues/Graphs)
                 render_moneyball_block(
                     df=df_budget,
                     kpi_cols=sel_kpis,                 # use the same KPI list your similarity section used
                     metric_direction=globals().get("metric_direction", {}), # same dict you use elsewhere
-                    title="Budget shortlist",
+                    title="Budget shortlist (Moneyball)",
                     key_prefix=f"{key_prefix}_budget_mb",
                 )
         else:
             st.info("Market values are missing or zero in this pool.")
+
+
+    # Export current profile to PDF
+    if st.button("Export this profile to PDF", key="export_player_pdf"):
+        try:
+            _export_player_report_pdf(
+                sel_player=sel_player,
+                target_row=target_row,
+                league_key=league_key,
+                raw_pos=raw_pos,
+                minutes_text=mins_text,
+                minutes_share_text=share_text,
+                player_vals=player_vals,
+                league_pcts=league_pcts,
+                secondary_pcts=secondary_pcts,
+                secondary_label=secondary_label,
+                sim_all=sim_all,
+                sim_three=sim_three,
+            )
+            st.success(
+                "Saved PDF to "
+                r"G:\My Drive\Reference Club\Databases\Scouting Workspace\Data Reports"
+            )
+        except Exception as e:
+            st.error(f"Failed to export PDF: {e}")
