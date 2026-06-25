@@ -2832,10 +2832,17 @@ if nav == "Overview":
 
     action_col, export_col = st.columns([1, 1])
     with action_col:
-        open_disabled = selected_example_row is None or ROW_ID_COL not in df.columns
+        open_disabled = selected_example_row is None
         if st.button("Open selected player profile", use_container_width=True, key="home_open_example_player", disabled=open_disabled):
-            st.session_state.profile_focus_id = str(selected_example_row.get(ROW_ID_COL, "")).strip()
-            st.session_state.nav = "Player Intelligence"
+            player_name = str(selected_example_row.get("Name", "")).strip()
+            player_team = _home_visible_team(selected_example_row)
+            wyscout_id = str(selected_example_row.get("Wyscout Player ID", "")).strip()
+
+            st.session_state["goto_player_plain"] = player_name
+            st.session_state["goto_team_plain"] = player_team
+            st.session_state["goto_ws_id_plain"] = wyscout_id
+            st.session_state["da_jump_to"] = "search"
+            st.session_state.nav = "Data Lab"
             st.rerun()
 
     with export_col:
