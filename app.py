@@ -66,8 +66,7 @@ import unicodedata
 import json
 
 from helpers import recruitment_data_analysis as recruitment_da
-from helpers.player_reports_page import render_player_reports_page
-from helpers.profile_defs import ROLE_PRESET_COLUMNS, default_role_presets_frame
+from helpers.player_reports_page import render_player_reports_page, build_player_profile_dossier_pdf, player_dossier_filename
 from pathlib import Path
 
 def resolve_app_root() -> Path:
@@ -690,31 +689,6 @@ def _tidy_person_name(s: str) -> str:
 def split_roles(cell: str) -> List[str]:
     if not cell: return []
     return [x.strip() for x in cell.split(",") if x.strip()]
-
-def _safe_bool_mask(mask, index) -> pd.Series:
-    """Return a real boolean Series, even when pandas/pyarrow returns nullable or string masks."""
-    try:
-        if isinstance(mask, pd.Series):
-            s = mask.reindex(index)
-        else:
-            s = pd.Series(mask, index=index)
-    except Exception:
-        return pd.Series(False, index=index, dtype=bool)
-
-    def _as_bool(value) -> bool:
-        if value is True:
-            return True
-        if value is False or value is None:
-            return False
-        try:
-            if pd.isna(value):
-                return False
-        except Exception:
-            pass
-        text = str(value).strip().casefold()
-        return text in {"true", "1", "yes", "y"}
-
-    return s.map(_as_bool).fillna(False).astype(bool)
 
 def get_primary_role(row: pd.Series) -> str:
     roles = split_roles(str(row.get("Position","")))
@@ -2243,7 +2217,18 @@ def add_or_update_row(df: pd.DataFrame, row: Dict[str, Any]) -> pd.DataFrame:
     return df
 
 def export_buttons(df_view: pd.DataFrame, key_suf: str = ""):
-    return None
+    c1, c2 = st.columns(2)
+    c1.download_button("Download CSV", data=df_view.to_csv(index=False).encode("utf-8"),
+                       file_name=f"export{key_suf}.csv", mime="text/csv")
+    try:
+        with pd.ExcelWriter(io.BytesIO(), engine="xlsxwriter") as w:
+            df_view.to_excel(w, index=False, sheet_name="Sheet1")
+            data = w.book.filename.getvalue()  # type: ignore
+        c2.download_button("Download Excel", data=data,
+                           file_name=f"export{key_suf}.xlsx",
+                           mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    except Exception:
+        st.caption("Install xlsxwriter for Excel export. CSV export always works.")
 
 def _safe_unlink(path: str):
     try:
@@ -2426,7 +2411,7 @@ def profile_editor(df: pd.DataFrame, row_index: int) -> pd.DataFrame:
         cur = str(df.at[row_index, col]) if col in df.columns else ""
         note_vals[sname] = st.text_area(sname, value=cur, key=f"note_{row_index}_{sname}", height=120 if sname!="Conclusion" else 100)
 
-    if st.button("Save profile", type="primary", key=f"save_profile_{row_index}"):
+    if st.button("💾 Save profile", type="primary", key=f"save_profile_{row_index}"):
         df.at[row_index, "Player Current Team"] = team_val.strip()
         df.at[row_index, "Division"]            = division_val.strip()
         df.at[row_index, "Age Group"]           = age_group_val.strip()
@@ -2473,84 +2458,28 @@ from pathlib import Path
 PRESET_PATH = Path("Scouting Workspace/Player Profiling/Role_Profile_KPIs.csv")
 PRESET_PATH.parent.mkdir(parents=True, exist_ok=True)
 
-def _normalise_preset_frame(df: pd.DataFrame | None) -> pd.DataFrame:
-    cols = list(ROLE_PRESET_COLUMNS)
-    if df is None or df.empty:
-        return pd.DataFrame(columns=cols)
-    out = df.copy()
-    for c in cols:
-        if c not in out.columns:
-            out[c] = ""
-    return out[cols].fillna("").astype(str)
-
-def _merge_default_role_presets(df: pd.DataFrame | None) -> tuple[pd.DataFrame, bool]:
-    base = _normalise_preset_frame(df)
-    defaults = _normalise_preset_frame(default_role_presets_frame())
-
-    if defaults.empty:
-        return base, False
-
-    existing = {
-        str(v).strip().casefold()
-        for v in base.get("Profile", pd.Series(dtype=str)).dropna().astype(str)
-        if str(v).strip()
-    }
-
-    missing = defaults[
-        ~defaults["Profile"].astype(str).str.strip().str.casefold().isin(existing)
-    ]
-
-    if missing.empty:
-        return base, False
-
-    merged = pd.concat([base, missing], ignore_index=True)
-    merged = _normalise_preset_frame(merged)
-    return merged, True
-
 def _load_presets() -> pd.DataFrame:
-    df = pd.DataFrame(columns=list(ROLE_PRESET_COLUMNS))
-
     if PRESET_PATH.exists():
         try:
-            df = pd.read_csv(PRESET_PATH, dtype=str).fillna("")
+            return pd.read_csv(PRESET_PATH, dtype=str).fillna("")
         except Exception:
-            st.warning("Failed to read KPI presets CSV. Recreating it with the default role presets.")
-
-    df, changed = _merge_default_role_presets(df)
-
-    if changed or not PRESET_PATH.exists():
-        df.to_csv(PRESET_PATH, index=False, encoding="utf-8-sig")
-
+            st.warning("Failed to read KPI presets CSV. Recreating a fresh one.")
+    df = pd.DataFrame(columns=["Profile","KPIs","Positions","Notes"])
+    df.to_csv(PRESET_PATH, index=False, encoding="utf-8-sig")
     return df
 
 def _save_presets(df: pd.DataFrame):
-    df, _ = _merge_default_role_presets(df)
+    cols = ["Profile","KPIs","Positions","Notes"]
+    for c in cols:
+        if c not in df.columns:
+            df[c] = ""
+    df = df[cols].fillna("")
     df.to_csv(PRESET_PATH, index=False, encoding="utf-8-sig")
 
 def _parse_list(cell: str) -> list[str]:
-    if cell is None:
+    if not cell:
         return []
-
-    text = str(cell).strip()
-    if not text:
-        return []
-
-    if text.startswith("[") and text.endswith("]"):
-        try:
-            parsed = json.loads(text)
-            if isinstance(parsed, list):
-                return [str(c).strip() for c in parsed if str(c).strip()]
-        except Exception:
-            pass
-
-    if "|" in text:
-        parts = text.split("|")
-    elif ";" in text:
-        parts = text.split(";")
-    else:
-        parts = text.split(",")
-
-    return [c.strip() for c in parts if c.strip()]
+    return [c.strip() for c in str(cell).split(",") if c.strip()]
 
 def _sanitize_defaults(defaults: list[str] | None, options: list[str]) -> tuple[list[str], list[str]]:
     defaults = defaults or []
@@ -2566,7 +2495,7 @@ def _sanitize_defaults(defaults: list[str] | None, options: list[str]) -> tuple[
 PUBLIC_NAV_ITEMS = [
     ("Overview", "nav_overview"),
     ("Player Intelligence", "nav_player_intelligence"),
-    ("Recruitment Data Workspace", "nav_data_lab"),
+    ("Data Lab", "nav_data_lab"),
     ("Shortlist Board", "nav_shortlist"),
     ("Settings", "nav_settings"),
 ]
@@ -2615,7 +2544,7 @@ nav = st.session_state.nav
 
 if nav == "Settings":
     st.header("Settings")
-    st.caption("Keep the working pages clean. Use this page for paths, data health and cache controls.")
+    st.caption("Keep the working pages clean. Use this page for paths, data health, cache controls and debug mode.")
 
     def _settings_non_empty_count(series: pd.Series) -> int:
         return int(series.fillna("").astype(str).str.strip().ne("").sum()) if isinstance(series, pd.Series) else 0
@@ -2628,7 +2557,7 @@ if nav == "Settings":
         "Active database",
         "Folders",
         "Data health",
-        "Cache",
+        "Cache and debug",
     ])
 
     with tab_active:
@@ -2718,9 +2647,25 @@ if nav == "Settings":
                 csvs = sorted(Path(folder).glob("*.csv"))
                 st.write(f"{folder}: {len(csvs)} CSV files")
 
+        with st.expander("CSV read errors", expanded=False):
+            errs = st.session_state.get("wyscout_read_errors", [])
+            if errs:
+                st.code("\n".join(errs[-40:]))
+                if st.button("Clear CSV read errors", key="settings_clear_wyscout_read_errors"):
+                    st.session_state["wyscout_read_errors"] = []
+                    st.rerun()
+            else:
+                st.caption("No CSV read errors logged.")
+
     with tab_cache:
-        st.subheader("Cache")
-        st.session_state["debug_mode"] = False
+        st.subheader("Cache and debug")
+        st.session_state["debug_mode"] = st.toggle(
+            "Show debug panels inside scouting pages",
+            value=bool(st.session_state.get("debug_mode", False)),
+            key="settings_debug_mode_toggle",
+        )
+
+        st.caption("Leave debug mode off during normal scouting work. Turn it on when checking Wyscout paths, metric mappings or position matching.")
 
         if st.button("Clear Streamlit cache", key="settings_clear_cache"):
             st.cache_data.clear()
@@ -2769,6 +2714,47 @@ def _workflow_card(label: str, title: str, body: str):
         unsafe_allow_html=True,
     )
 
+def _home_visible_team(row: pd.Series) -> str:
+    on_loan = str(row.get("On loan", "")).strip().lower() in {"yes", "true", "1"}
+    loan_club = str(row.get("Loan Club", "")).strip()
+    parent_club = str(row.get("Parent Club", "")).strip()
+    team = str(row.get("Player Current Team", "")).strip()
+    return f"{loan_club} to {parent_club}" if on_loan and loan_club and parent_club else (loan_club or team)
+
+
+def _home_player_label(row: pd.Series) -> str:
+    name = str(row.get("Name", "")).strip() or "Unnamed player"
+    team = _home_visible_team(row) or "Club not added"
+    position = str(row.get("Position", "")).strip() or "Position not added"
+    age = str(row.get("Age", "")).strip() or "Age not added"
+    return f"{name} | {team} | {position} | Age {age}"
+
+
+def _home_position_candidates(df_in: pd.DataFrame, role: str) -> pd.DataFrame:
+    if df_in is None or df_in.empty or not role or "Position" not in df_in.columns:
+        return pd.DataFrame()
+
+    role_key = str(role).strip().casefold()
+    matches = df_in[
+        df_in["Position"].astype(str).apply(
+            lambda value: role_key in [p.strip().casefold() for p in split_roles(value)]
+        )
+    ].copy()
+
+    if matches.empty:
+        return matches
+
+    matches["__has_report"] = matches.get("Full Report Path", pd.Series("", index=matches.index)).fillna("").astype(str).str.strip().ne("").astype(int)
+    matches["__has_status"] = matches.get("Shortlist Status", pd.Series("", index=matches.index)).fillna("").astype(str).str.strip().ne("").astype(int)
+    matches["__has_wyscout"] = matches.get("Wyscout Player ID", pd.Series("", index=matches.index)).fillna("").astype(str).str.strip().ne("").astype(int)
+    matches["__sort_time"] = pd.to_datetime(matches.get("Last edited time", pd.Series("", index=matches.index)), errors="coerce")
+
+    return matches.sort_values(
+        ["__has_report", "__has_status", "__has_wyscout", "__sort_time"],
+        ascending=[False, False, False, False],
+        na_position="last",
+    ).drop(columns=["__has_report", "__has_status", "__has_wyscout", "__sort_time"], errors="ignore")
+
 if nav == "Overview":
     df = load_db(st.session_state.db_csv).copy()
     df = _sort_newest_first(df)
@@ -2814,15 +2800,68 @@ if nav == "Overview":
             st.session_state.nav = "Player Intelligence"
             st.rerun()
     with w2:
-        _workflow_card("Step 2", "Recruitment Data Workspace", "Compare players against role relevant cohorts, build radars and use preset KPI profiles for clear ranking evidence.")
-        if st.button("Open Recruitment Data Workspace", use_container_width=True, key="home_open_data"):
-            st.session_state.nav = "Recruitment Data Workspace"
+        _workflow_card("Step 2", "Data Lab", "Compare players against role relevant cohorts, build radars, use preset KPI profiles and export ranking evidence cleanly.")
+        if st.button("Open Data Lab", use_container_width=True, key="home_open_data"):
+            st.session_state.nav = "Data Lab"
             st.rerun()
     with w3:
-        _workflow_card("Step 3", "Shortlist Board", "Move from longlist to role based shortlist and manage ranked options in a clean recruitment board.")
+        _workflow_card("Step 3", "Shortlist Board", "Move from longlist to role based shortlist, manage ranked options and export a clean recruitment board.")
         if st.button("Open Shortlist Board", use_container_width=True, key="home_open_shortlist"):
             st.session_state.nav = "Shortlist Board"
             st.rerun()
+
+    st.markdown('<div class="riw-section-title">Position search example</div>', unsafe_allow_html=True)
+    st.caption("Use this as a portfolio friendly shortcut. Select a position, open a real example profile directly, or export the selected player as a clean dossier.")
+
+    pos_col, player_col = st.columns([1, 2])
+    with pos_col:
+        example_role = st.selectbox("Position", ROLE_ORDER, key="home_example_position")
+
+    example_candidates = _home_position_candidates(df, example_role)
+
+    with player_col:
+        if example_candidates.empty:
+            st.selectbox("Example player", ["No player available for this position"], key="home_example_player_empty", disabled=True)
+            selected_example_row = None
+        else:
+            option_rows = example_candidates.head(25).copy()
+            option_labels = [_home_player_label(row) for _, row in option_rows.iterrows()]
+            selected_label = st.selectbox("Example player", option_labels, key="home_example_player")
+            selected_pos = option_labels.index(selected_label)
+            selected_example_row = option_rows.iloc[selected_pos]
+
+    action_col, export_col = st.columns([1, 1])
+    with action_col:
+        open_disabled = selected_example_row is None or ROW_ID_COL not in df.columns
+        if st.button("Open selected player profile", use_container_width=True, key="home_open_example_player", disabled=open_disabled):
+            st.session_state.profile_focus_id = str(selected_example_row.get(ROW_ID_COL, "")).strip()
+            st.session_state.nav = "Player Intelligence"
+            st.rerun()
+
+    with export_col:
+        if selected_example_row is None:
+            st.download_button(
+                "Export selected player dossier",
+                data=b"",
+                file_name="player_dossier.pdf",
+                mime="application/pdf",
+                key="home_export_example_empty",
+                disabled=True,
+                use_container_width=True,
+            )
+        else:
+            dossier_pdf = build_player_profile_dossier_pdf(selected_example_row)
+            if dossier_pdf:
+                st.download_button(
+                    "Export selected player dossier",
+                    data=dossier_pdf,
+                    file_name=player_dossier_filename(selected_example_row),
+                    mime="application/pdf",
+                    key="home_export_example_player",
+                    use_container_width=True,
+                )
+            else:
+                st.caption("Install reportlab to enable dossier export.")
 
     st.markdown('<div class="riw-section-title">Workspace snapshot</div>', unsafe_allow_html=True)
     s1, s2 = st.columns(2)
@@ -2832,10 +2871,7 @@ if nav == "Overview":
         role_rows = []
         for role in ROLE_ORDER:
             if "Position" in df.columns:
-                mask_role = _safe_bool_mask(
-                    df["Position"].astype(str).apply(lambda x: role.lower() in [r.lower() for r in split_roles(x)]),
-                    df.index,
-                )
+                mask_role = df["Position"].astype(str).apply(lambda x: role.lower() in [r.lower() for r in split_roles(x)])
                 count = int(mask_role.sum())
             else:
                 count = 0
@@ -2893,7 +2929,7 @@ if nav == "Player Intelligence":
 # =========================
 # 15) DATA ANALYSIS PAGE
 # =========================
-if nav == "Recruitment Data Workspace":
+if nav == "Data Lab":
     recruitment_da.render_data_analysis_page(
         wyscout_folders=wyscout_folders,
         dea_block=dea_block,
@@ -3009,7 +3045,7 @@ if nav == "Shortlist Board":
                     return True
             return False
 
-        return _safe_bool_mask(data["Position"].astype(str).map(_matches), data.index)
+        return data["Position"].astype(str).map(_matches)
 
     def _safe_text(v) -> str:
         if v is None:
@@ -3029,8 +3065,8 @@ if nav == "Shortlist Board":
         return hit.iloc[0] if not hit.empty else pd.Series(dtype=object)
 
     def _defaults_for_role(role_code: str) -> list[str]:
-        mask_role = _safe_bool_mask(_role_mask(df_all, role_code), df_all.index)
-        mask_status = _safe_bool_mask(df_all["Shortlist Status"].astype(str).str.strip() != "", df_all.index)
+        mask_role = _role_mask(df_all, role_code)
+        mask_status = df_all["Shortlist Status"].astype(str).str.strip() != ""
         out = df_all.loc[mask_role & mask_status].copy()
         if out.empty:
             return []
@@ -3041,7 +3077,7 @@ if nav == "Shortlist Board":
         return out["Name"].dropna().astype(str).drop_duplicates().tolist()
 
     def _options_for_role(role_code: str, pool: pd.DataFrame, saved: list[str]) -> list[str]:
-        mask_role = _safe_bool_mask(_role_mask(pool, role_code), pool.index)
+        mask_role = _role_mask(pool, role_code)
         opts = pool.loc[mask_role, "Name"].dropna().astype(str).drop_duplicates().tolist()
         for name in saved:
             if name and name not in opts and (df_all["Name"].astype(str) == str(name)).any():
@@ -3177,7 +3213,7 @@ if nav == "Shortlist Board":
         fig.set_facecolor("#07111f")
         ax.set_facecolor("#07111f")
 
-        ax.text(60, -3.5, "FCM Shadow Team", ha="center", va="center", fontsize=19, fontweight="bold", color="#f8fafc")
+        ax.text(60, -3.5, "Shortlist Board", ha="center", va="center", fontsize=19, fontweight="bold", color="#f8fafc")
         ax.text(60, 83.2, "Ranked by role profile. Colour strip shows shortlist status.", ha="center", va="center", fontsize=10.5, color="#cbd5e1")
 
         current_picks = st.session_state.get("shortlist_picks", {})
@@ -3253,7 +3289,7 @@ if nav == "Shortlist Board":
         buf.seek(0)
         return buf.getvalue()
 
-    tab_pitch, tab_select, tab_table = st.tabs(["Pitch Board", "Selection and Status", "Summary"])
+    tab_pitch, tab_select, tab_table = st.tabs(["Pitch Board", "Selection and Status", "Summary and Export"])
 
     with tab_pitch:
         top_left, top_right = st.columns([1, 3])
@@ -3264,6 +3300,7 @@ if nav == "Shortlist Board":
 
         pitch_png = _render_pitch_board(max_names=int(players_on_pitch))
         st.image(pitch_png, caption="Shortlist Board", use_container_width=True)
+        st.download_button("Download pitch board PNG", data=pitch_png, file_name="shortlist_board.png", mime="image/png", key="shortlist_pitch_png_download")
 
     with tab_select:
         st.caption("Pick players by role. Existing selected players stay available even when the filters are changed, so you do not lose the board accidentally.")
@@ -3408,3 +3445,25 @@ if nav == "Shortlist Board":
             tbl = tbl[display_cols]
             st.dataframe(tbl, use_container_width=True, hide_index=True, height=460)
 
+            col_dl1, col_dl2 = st.columns(2)
+            col_dl1.download_button(
+                "Download shortlist CSV",
+                data=tbl.to_csv(index=False).encode("utf-8-sig"),
+                file_name="shortlist_board.csv",
+                mime="text/csv",
+                key="shortlist_tbl_csv",
+            )
+
+            try:
+                out = io.BytesIO()
+                with pd.ExcelWriter(out, engine="xlsxwriter") as writer:
+                    tbl.to_excel(writer, index=False, sheet_name="Shortlist Board")
+                col_dl2.download_button(
+                    "Download shortlist Excel",
+                    data=out.getvalue(),
+                    file_name="shortlist_board.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    key="shortlist_tbl_xlsx",
+                )
+            except Exception:
+                st.caption("Install xlsxwriter for Excel export. CSV export always works.")
