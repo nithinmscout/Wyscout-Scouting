@@ -1623,16 +1623,16 @@ def render_search_by_position_panel(
 
         if "·" in s:
             left, right = [x.strip() for x in s.split("·", 1)]
-            m = re.search(r"(\d+)", right)
+            m = _re.search(r"(\d+)", right)
             if m:
                 return f"{left} T{m.group(1)}"
             return left
 
-        m = re.search(r"^(.*)\s+T(\d+)\s*$", s)
+        m = _re.search(r"^(.*)\s+T(\d+)\s*$", s)
         if m:
             return f"{m.group(1).strip()} T{m.group(2)}"
 
-        m = re.search(r"^(.*?)(\d+)\s*$", s)
+        m = _re.search(r"^(.*?)(\d+)\s*$", s)
         if m:
             return f"{m.group(1).strip()} T{m.group(2)}"
 
