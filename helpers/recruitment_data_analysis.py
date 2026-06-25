@@ -1554,13 +1554,14 @@ def render_search_by_position_panel(
     default_top_n: int = 50,
     use_tier_norm: bool = True,
 ):
-
     """
-    Search tab panel.
-    Filter by one or more Wyscout positions, then rank players by one or more selected role scores.
-    Optional gates for Traits and Responsibilities.
-    All scoring uses the same cohort logic as your existing Roles Traits Responsibilities blocks.
-    Tier coefficient weightage is applied after the 0 to 100 score is computed.
+    Position first search panel.
+
+    Behaviour:
+    1. Selecting a position immediately returns the best performing players in that position.
+    2. Leaving role profile empty scores every available role for the selected position and ranks by the player's best fit.
+    3. Selecting a role profile ranks the same position pool by that role.
+    4. League, age, minutes, trait and responsibility filters apply after the position pool is built.
     """
 
     try:
@@ -1591,6 +1592,28 @@ def render_search_by_position_panel(
             out.append(s)
         return out
 
+    def _canonical_league_key(raw: str | None) -> str:
+        s = str(raw or "").strip()
+        if not s:
+            return ""
+
+        if "·" in s:
+            left, right = [x.strip() for x in s.split("·", 1)]
+            m = re.search(r"(\d+)", right)
+            if m:
+                return f"{left} T{m.group(1)}"
+            return left
+
+        m = re.search(r"^(.*)\s+T(\d+)\s*$", s)
+        if m:
+            return f"{m.group(1).strip()} T{m.group(2)}"
+
+        m = re.search(r"^(.*?)(\d+)\s*$", s)
+        if m:
+            return f"{m.group(1).strip()} T{m.group(2)}"
+
+        return s
+
     def _tier_label_from_league_key(league_key: str | None) -> str:
         canon = _canonical_league_key(league_key)
         if not canon:
@@ -1598,10 +1621,6 @@ def render_search_by_position_panel(
         return LEAGUE_TIER_LABEL.get(canon, "Middle Tier")
 
     def _tier_adjust_pct(pct: float, league_key: str | None) -> float:
-        """
-        pct is 0 to 100.
-        Apply tier coefficient as a shrink towards 50, similar spirit to your tier weighting.
-        """
         if pct is None or (isinstance(pct, float) and np.isnan(pct)):
             return float("nan")
         if not use_tier_norm:
@@ -1609,34 +1628,6 @@ def render_search_by_position_panel(
 
         coef = float(tier_strength_coef(_tier_label_from_league_key(league_key)))
         return float((pct * coef) + (50.0 * (1.0 - coef)))
-
-    def _canonical_league_key(raw: str | None) -> str:
-        """
-        Convert:
-          'England · T1' to 'England T1'
-          'England T1' to 'England T1'
-          'Belgium1' to 'Belgium T1'
-        """
-        s = str(raw or "").strip()
-        if not s:
-            return ""
-
-        if "·" in s:
-            left, right = [x.strip() for x in s.split("·", 1)]
-            m = _re.search(r"(\d+)", right)
-            if m:
-                return f"{left} T{m.group(1)}"
-            return left
-
-        m = _re.search(r"^(.*)\s+T(\d+)\s*$", s)
-        if m:
-            return f"{m.group(1).strip()} T{m.group(2)}"
-
-        m = _re.search(r"^(.*?)(\d+)\s*$", s)
-        if m:
-            return f"{m.group(1).strip()} T{m.group(2)}"
-
-        return s
 
     def _position_role_context(pos_code: str) -> dict:
         profile_key = _infer_profile_key_from_position_text(str(pos_code))
@@ -1648,6 +1639,15 @@ def render_search_by_position_panel(
             "role_group": role_group,
             "role_defs": role_defs,
         }
+
+    def _safe_float(value) -> float:
+        try:
+            v = float(value)
+            if math.isnan(v):
+                return float("nan")
+            return v
+        except Exception:
+            return float("nan")
 
     if master_df is None or len(master_df) == 0:
         st.info("No data loaded.")
@@ -1663,19 +1663,10 @@ def render_search_by_position_panel(
 
     player_col = _find_col(master_df, ["Player", "player", "Name", "name", "Player name", "Player Name", "player name"])
     team_col = _find_col(master_df, ["Team", "team", "Squad", "squad", "Club", "club", "Current team", "Current Team"])
-
     league_key_col = _find_col(
         master_df,
         ["__league_key", "__league", "__division", "League", "league", "Competition", "competition"],
     )
-
-    leagues = []
-    if league_key_col:
-        leagues = sorted([
-            x for x in master_df[league_key_col].dropna().unique().tolist()
-            if str(x).strip() and str(x) != "Unknown"
-        ])
-
     age_col = _find_col(master_df, ["Age", "age"])
     mins_col = _find_col(master_df, ["Minutes", "minutes", "Minutes played", "minutes_played", "Min", "min"])
     nation_col = _find_col(master_df, ["__nation", "Nation", "nation"])
@@ -1695,21 +1686,22 @@ def render_search_by_position_panel(
         positions = WS_POS_ORDER.copy()
 
     st.markdown("### Search by position")
+    st.caption(
+        "Select a position to immediately see the best statistical performers. Leave role profile empty for a broad position ranking, or choose a role to rank players by that role fit."
+    )
 
     default_pos = positions[0] if positions else "CMF"
-    c1, c2, c3 = st.columns([1.6, 1.1, 1.0])
+    c1, c2 = st.columns([2.0, 1.0])
     with c1:
         selected_pos_codes = st.multiselect(
             "Wyscout positions",
             positions,
             default=[default_pos],
             key=f"{key_prefix}_pos_multi",
-            help="LCMF, RCMF and CMF are treated as one central midfield family. LAMF, RAMF and AMF are treated as one attacking midfield family. LW and RW remain side specific.",
+            help="CMF, LCMF and RCMF are treated as one central midfield family. AMF, LAMF and RAMF are treated as one attacking midfield family. LW and RW stay side specific.",
         )
     with c2:
         top_n = st.slider("Max results", 10, 200, int(default_top_n), 5, key=f"{key_prefix}_topn")
-    with c3:
-        run = st.button("Run search", type="primary", key=f"{key_prefix}_run")
 
     selected_pos_codes = _ordered_unique(selected_pos_codes)
     if not selected_pos_codes:
@@ -1720,20 +1712,11 @@ def render_search_by_position_panel(
     usable_role_contexts = [ctx for ctx in role_contexts if ctx["role_defs"]]
 
     if not usable_role_contexts:
-        st.warning("No roles found for the selected position mapping.")
+        st.warning("No role definitions found for the selected position mapping.")
         return
 
     selected_profile_keys = _ordered_unique([ctx["profile_key"] for ctx in usable_role_contexts if ctx["profile_key"]])
     selected_role_groups = _ordered_unique([ctx["role_group"] for ctx in usable_role_contexts if ctx["role_group"]])
-
-    st.caption(
-        "Selected profiles: "
-        + ", ".join(selected_profile_keys)
-        + "   Role groups: "
-        + ", ".join(selected_role_groups)
-    )
-
-    st.markdown("#### Role filters")
 
     role_meta_by_key: dict[str, dict] = {}
     role_name_counts: dict[str, int] = {}
@@ -1776,64 +1759,41 @@ def render_search_by_position_panel(
 
     role_options = sorted(role_options, key=str.casefold)
 
-    default_roles = role_options[:1]
-    selected_role_labels = st.multiselect(
-        "Roles to test",
-        role_options,
-        default=default_roles,
-        key=f"{key_prefix}_role_multi",
-        help="This list is built from all roles available to the selected Wyscout positions. There is no weighting between roles.",
-    )
+    st.markdown("#### Role and market filters")
 
-    selected_role_labels = _ordered_unique(selected_role_labels)
-    if not selected_role_labels:
-        st.info("Select at least one role to score.")
-        return
-
-    selected_role_configs: list[dict] = []
-    st.caption("Set the acceptable role score range for each selected role.")
-
-    range_cols = st.columns(2)
-    for idx, role_label in enumerate(selected_role_labels):
-        role_key = role_label_to_key.get(role_label)
-        meta = role_meta_by_key.get(role_key, {}) if role_key else {}
-        if not meta:
-            continue
-
-        with range_cols[idx % 2]:
-            score_range = st.slider(
-                f"{role_label} score range",
-                0.0,
-                100.0,
-                (60.0, 100.0),
-                1.0,
-                key=f"{key_prefix}_role_range_{role_key}",
-            )
-            st.caption("Position source: " + ", ".join(meta.get("pos_codes", [])))
-
-        selected_role_configs.append(
-            {
-                "role_key": role_key,
-                "profile_keys": meta.get("profile_keys", []),
-                "pos_codes": meta.get("pos_codes", []),
-                "role_group": meta.get("role_group", ""),
-                "role_name": meta.get("role_name", role_label),
-                "rules": meta.get("rules", []) or [],
-                "score_range": score_range,
-                "label": role_label,
-            }
-        )
-
-    if not selected_role_configs:
-        st.info("No valid role scorer could be built from the selected roles.")
-        return
-
-    st.markdown("#### Optional filters")
     f1, f2 = st.columns([1.2, 1.2])
 
     with f1:
+        selected_role_labels = st.multiselect(
+            "Role profile",
+            role_options,
+            default=[],
+            key=f"{key_prefix}_role_multi",
+            help="Leave empty for a broad position search. Pick one or more roles to rank the same position pool by role fit.",
+        )
+
+        selected_role_labels = _ordered_unique(selected_role_labels)
+
+        if selected_role_labels:
+            role_score_range = st.slider(
+                "Role score range",
+                0.0,
+                100.0,
+                (0.0, 100.0),
+                1.0,
+                key=f"{key_prefix}_role_score_range",
+            )
+        else:
+            role_score_range = (0.0, 100.0)
+            st.caption("Broad position mode is active. The ranking uses each player's best role score inside the selected position family.")
+
+        leagues = []
         if league_key_col:
-            leagues = sorted([x for x in master_df[league_key_col].dropna().unique().tolist() if str(x).strip() != ""])
+            leagues = sorted([
+                x for x in master_df[league_key_col].dropna().unique().tolist()
+                if str(x).strip() and str(x) != "Unknown"
+            ])
+
         league_pick = st.multiselect(
             "Leagues",
             leagues,
@@ -1842,9 +1802,11 @@ def render_search_by_position_panel(
             help="Leave empty for all leagues.",
         )
 
+    with f2:
         if age_col:
-            amin = float(pd.to_numeric(master_df[age_col], errors="coerce").min())
-            amax = float(pd.to_numeric(master_df[age_col], errors="coerce").max())
+            age_values = pd.to_numeric(master_df[age_col], errors="coerce")
+            amin = float(age_values.min())
+            amax = float(age_values.max())
             if np.isfinite(amin) and np.isfinite(amax):
                 age_range = st.slider(
                     "Age range",
@@ -1861,14 +1823,16 @@ def render_search_by_position_panel(
             st.caption("Age filter unavailable because no Age column was found.")
 
         if mins_col:
-            mmin = float(pd.to_numeric(master_df[mins_col], errors="coerce").min())
-            mmax = float(pd.to_numeric(master_df[mins_col], errors="coerce").max())
+            mins_values = pd.to_numeric(master_df[mins_col], errors="coerce")
+            mmin = float(mins_values.min())
+            mmax = float(mins_values.max())
             if np.isfinite(mmin) and np.isfinite(mmax):
+                default_mins = min(max(450.0, float(np.floor(mmin))), float(np.ceil(mmax)))
                 min_mins = st.slider(
                     "Minimum minutes",
                     float(np.floor(mmin)),
                     float(np.ceil(mmax)),
-                    float(max(0.0, np.floor(mmin))),
+                    default_mins,
                     10.0,
                     key=f"{key_prefix}_mins",
                 )
@@ -1877,6 +1841,38 @@ def render_search_by_position_panel(
         else:
             min_mins = None
             st.caption("Minutes filter unavailable because no Minutes column was found.")
+
+    selected_role_configs: list[dict] = []
+    for role_label in selected_role_labels:
+        role_key = role_label_to_key.get(role_label)
+        meta = role_meta_by_key.get(role_key, {}) if role_key else {}
+        if not meta:
+            continue
+        selected_role_configs.append(
+            {
+                "role_key": role_key,
+                "profile_keys": meta.get("profile_keys", []),
+                "pos_codes": meta.get("pos_codes", []),
+                "role_group": meta.get("role_group", ""),
+                "role_name": meta.get("role_name", role_label),
+                "rules": meta.get("rules", []) or [],
+                "label": role_label,
+            }
+        )
+
+    all_role_configs: list[dict] = []
+    for role_key, meta in role_meta_by_key.items():
+        all_role_configs.append(
+            {
+                "role_key": role_key,
+                "profile_keys": meta.get("profile_keys", []),
+                "pos_codes": meta.get("pos_codes", []),
+                "role_group": meta.get("role_group", ""),
+                "role_name": meta.get("role_name", ""),
+                "rules": meta.get("rules", []) or [],
+                "label": meta.get("label", meta.get("role_name", "")),
+            }
+        )
 
     trait_defs_by_name: dict = {}
     for role_group in selected_role_groups:
@@ -1890,7 +1886,10 @@ def render_search_by_position_panel(
         for name in names:
             resp_profile_map.setdefault(name, []).append(profile_key)
 
-    with f2:
+    st.markdown("#### Additional scoring filters")
+    g1, g2 = st.columns([1.2, 1.2])
+
+    with g1:
         trait_names = list(trait_defs_by_name.keys())
         trait_pick = st.multiselect(
             "Traits to include",
@@ -1902,11 +1901,13 @@ def render_search_by_position_panel(
             "Trait score range",
             0.0,
             100.0,
-            (60.0, 100.0),
+            (0.0, 100.0),
             1.0,
             key=f"{key_prefix}_trait_range",
+            disabled=not bool(trait_pick),
         )
 
+    with g2:
         resp_names_all = list(resp_profile_map.keys())
         resp_pick = st.multiselect(
             "Responsibilities to include",
@@ -1918,15 +1919,14 @@ def render_search_by_position_panel(
             "Responsibility score range",
             0.0,
             100.0,
-            (60.0, 100.0),
+            (0.0, 100.0),
             1.0,
             key=f"{key_prefix}_resp_range",
+            disabled=not bool(resp_pick),
         )
 
-    if not run:
-        return
-
     pool = master_df.copy()
+
     if league_key_col:
         pool = pool[pool[league_key_col].astype(str).str.strip().ne("Unknown")]
 
@@ -1939,8 +1939,7 @@ def render_search_by_position_panel(
         matched = [p for p in WS_POS_ORDER if p in tokens and p in eligible]
         return ", ".join(matched)
 
-    pos_up = pool[pos_col].fillna("").astype(str).str.upper()
-    mask = pos_up.apply(lambda s: len(_ws_pos_tokens(s) & eligible) > 0)
+    mask = pool[pos_col].fillna("").astype(str).apply(lambda s: len(_ws_pos_tokens(s) & eligible) > 0)
     pool = pool.loc[mask].copy()
     pool["__matched_positions"] = pool[pos_col].apply(_matched_position_text)
 
@@ -1957,130 +1956,29 @@ def render_search_by_position_panel(
 
     pool = pool.reset_index(drop=True)
 
-    with st.expander("Position matching debug", expanded=False):
-        st.write(
-            {
-                "selected_positions": selected_pos_codes,
-                "expanded_eligible_positions": [p for p in WS_POS_ORDER if p in eligible],
-                "rows_after_position_filter": int(len(pool)),
-            }
-        )
-        show_cols = [c for c in [player_col, team_col, pos_col, "__matched_positions"] if c and c in pool.columns]
-        if show_cols:
-            st.dataframe(pool[show_cols].head(40), use_container_width=True, hide_index=True)
-
-    with st.expander("Tier normalisation debug", expanded=False):
-        st.write("use_tier_norm:", bool(use_tier_norm))
-        st.write("Detected league column:", league_key_col)
-
-        if not league_key_col:
-            st.warning("No league column found. Tier mapping cannot run.")
-        else:
-            dbg = pool.copy()
-
-            dbg["_league_key"] = (
-                dbg[league_key_col]
-                .fillna("")
-                .astype(str)
-                .str.replace("\u00a0", " ", regex=False)
-                .str.strip()
-            )
-            dbg["_league_key"] = dbg["_league_key"].replace(
-                {"": "Unknown", "nan": "Unknown", "None": "Unknown"}
-            )
-
-            dbg["_tier_label"] = dbg["_league_key"].apply(_tier_label_from_league_key)
-            dbg["_coef"] = dbg["_tier_label"].apply(lambda x: float(tier_strength_coef(str(x))))
-
-            def _split_league_key(k: str) -> tuple[str, str]:
-                if not k or k == "Unknown":
-                    return ("Unknown", "")
-                if " T" in k:
-                    a, b = k.rsplit(" T", 1)
-                    return (a.strip(), f"T{b.strip()}")
-                return (k.strip(), "")
-
-            nation_tier = dbg["_league_key"].apply(_split_league_key)
-            dbg["_nation"] = nation_tier.apply(lambda x: x[0])
-            dbg["_tier_code"] = nation_tier.apply(lambda x: x[1])
-
-            league_summary = (
-                dbg.groupby(["_league_key", "_nation", "_tier_code", "_tier_label", "_coef"], dropna=False)
-                .size()
-                .reset_index(name="n_players")
-                .sort_values("n_players", ascending=False)
-                .reset_index(drop=True)
-            )
-            st.markdown("##### League key to tier label to coefficient")
-            st.dataframe(league_summary, use_container_width=True, hide_index=True)
-
-            mapped_keys = set(LEAGUE_TIER_LABEL.keys()) if isinstance(LEAGUE_TIER_LABEL, dict) else set()
-            league_summary["_is_unknown_key"] = (~league_summary["_league_key"].isin(mapped_keys)) | (
-                league_summary["_league_key"] == "Unknown"
-            )
-            unknown_keys_df = league_summary[league_summary["_is_unknown_key"]].copy()
-
-            st.markdown("##### Unknown league keys")
-            st.write("Unknown key count:", int(len(unknown_keys_df)))
-            if len(unknown_keys_df):
-                st.dataframe(
-                    unknown_keys_df[["_league_key", "_tier_label", "_coef", "n_players"]],
-                    use_container_width=True,
-                    hide_index=True,
-                )
-
-                show_cols = []
-                for c in [player_col, team_col, league_key_col, pos_col, age_col, mins_col]:
-                    if c and c in dbg.columns and c not in show_cols:
-                        show_cols.append(c)
-
-                st.markdown("##### Example player rows from unknown league keys")
-                st.dataframe(
-                    dbg[dbg["_league_key"].isin(set(unknown_keys_df["_league_key"]))][show_cols].head(30),
-                    use_container_width=True,
-                    hide_index=True,
-                )
-
-            tier_summary = (
-                dbg.groupby(["_tier_label", "_coef"], dropna=False)
-                .size()
-                .reset_index(name="n_players")
-                .sort_values("n_players", ascending=False)
-                .reset_index(drop=True)
-            )
-            st.markdown("##### Tier labels currently used in this filtered pool")
-            st.dataframe(tier_summary, use_container_width=True, hide_index=True)
-
-            suspicious = tier_summary[tier_summary["_coef"].isin([0.50])]
-            if len(suspicious):
-                st.warning(
-                    "Some tier labels are returning coefficient 0.50, which usually means the tier label is not in TIER_STRENGTH."
-                )
-                st.dataframe(suspicious, use_container_width=True, hide_index=True)
-
     if pool.empty:
-        st.info("No players found after filters.")
+        st.info("No players found after the current filters.")
         return
 
     if use_tier_norm:
         pool = _attach_tier_factor(pool)
 
+    base_cohort = pool.copy()
     cohort_df = pool.copy()
 
+    score_configs = selected_role_configs if selected_role_configs else all_role_configs
     role_score_cols: list[str] = []
-    role_score_labels: list[str] = []
 
-    for cfg_idx, cfg in enumerate(selected_role_configs):
+    for cfg_idx, cfg in enumerate(score_configs):
         col_name = f"__role_score_{cfg_idx}"
         role_score_cols.append(col_name)
-        role_score_labels.append(str(cfg["label"]))
 
         scores = []
         for _idx, r in cohort_df.iterrows():
             score, _detail = _score_bundle(
                 cfg["rules"],
                 min_kpis=3,
-                cohort_df=cohort_df,
+                cohort_df=base_cohort,
                 target_row=r,
                 use_tier_z=bool(use_tier_norm),
             )
@@ -2088,54 +1986,64 @@ def render_search_by_position_panel(
 
         cohort_df[col_name] = scores
 
-    role_gate_mask = pd.Series(True, index=cohort_df.index)
+    role_scores_matrix = cohort_df[role_score_cols].apply(pd.to_numeric, errors="coerce")
+    role_score_values: list[float] = []
+    best_role_values: list[str] = []
 
-    for cfg_idx, cfg in enumerate(selected_role_configs):
-        col_name = f"__role_score_{cfg_idx}"
-        lo, hi = cfg.get("score_range", (0.0, 100.0))
-        score_series = pd.to_numeric(cohort_df[col_name], errors="coerce")
-        role_gate_mask = role_gate_mask & score_series.between(float(lo), float(hi), inclusive="both")
-
-    cohort_df = cohort_df.loc[role_gate_mask].copy()
-
-    if cohort_df.empty:
-        st.info("No players matched the selected role score ranges.")
-        return
-
-    role_averages = []
-    for _idx, r in cohort_df.iterrows():
-        vals = np.array([float(r.get(col, np.nan)) for col in role_score_cols], dtype=float)
+    for row_idx in role_scores_matrix.index:
+        vals = role_scores_matrix.loc[row_idx].to_numpy(dtype=float)
         valid = np.isfinite(vals)
         if not valid.any():
-            role_averages.append(float("nan"))
+            role_score_values.append(float("nan"))
+            best_role_values.append("")
             continue
-        role_averages.append(float(np.mean(vals[valid])))
 
-    cohort_df["RoleScore"] = role_averages
+        if selected_role_configs:
+            role_score_values.append(float(np.mean(vals[valid])))
+            best_i = int(np.nanargmax(vals))
+            best_role_values.append(str(score_configs[best_i]["label"]))
+        else:
+            best_i = int(np.nanargmax(vals))
+            role_score_values.append(float(vals[best_i]))
+            best_role_values.append(str(score_configs[best_i]["label"]))
+
+    cohort_df["RoleScore"] = role_score_values
+    cohort_df["Best role"] = best_role_values
+
+    score_series = pd.to_numeric(cohort_df["RoleScore"], errors="coerce")
+    cohort_df = cohort_df[
+        score_series.between(float(role_score_range[0]), float(role_score_range[1]), inclusive="both")
+    ].copy()
+
+    if cohort_df.empty:
+        st.info("No players matched the selected role score range.")
+        return
 
     out_rows: list[dict] = []
 
     for _idx, r in cohort_df.iterrows():
         lk = r.get(league_key_col) if league_key_col else None
-
         row_ok = True
-        row_payload: dict = {}
 
-        row_payload["Player"] = r.get(player_col, "") if player_col else ""
-        row_payload["Team"] = r.get(team_col, "") if team_col else ""
-        row_payload["League"] = r.get(league_key_col, "") if league_key_col else ""
-        row_payload["Position"] = r.get(pos_col, "") if pos_col else ""
-        row_payload["Matched positions"] = r.get("__matched_positions", "")
-        row_payload["Age"] = r.get(age_col, np.nan) if age_col else np.nan
-        row_payload["Minutes"] = r.get(mins_col, np.nan) if mins_col else np.nan
-        row_payload["Role"] = " + ".join(role_score_labels)
-        row_payload["RoleScore"] = float(r.get("RoleScore", np.nan))
-
-        for cfg_idx, cfg in enumerate(selected_role_configs):
-            row_payload[f"Score {cfg['label']}"] = float(r.get(f"__role_score_{cfg_idx}", np.nan))
+        row_payload: dict = {
+            "Player": r.get(player_col, "") if player_col else "",
+            "Team": r.get(team_col, "") if team_col else "",
+            "League": r.get(league_key_col, "") if league_key_col else "",
+            "Position": r.get(pos_col, "") if pos_col else "",
+            "Matched positions": r.get("__matched_positions", ""),
+            "Age": r.get(age_col, np.nan) if age_col else np.nan,
+            "Minutes": r.get(mins_col, np.nan) if mins_col else np.nan,
+            "Role": " + ".join(selected_role_labels) if selected_role_labels else "Best available position role",
+            "Best role": r.get("Best role", ""),
+            "RoleScore": float(r.get("RoleScore", np.nan)),
+        }
 
         if use_tier_norm and "__tier_factor" in r.index:
             row_payload["TierCoef"] = float(r.get("__tier_factor"))
+
+        if selected_role_configs:
+            for cfg_idx, cfg in enumerate(score_configs):
+                row_payload[f"Score {cfg['label']}"] = float(r.get(f"__role_score_{cfg_idx}", np.nan))
 
         for tname in trait_pick:
             trait_vals = []
@@ -2146,7 +2054,7 @@ def render_search_by_position_panel(
                 tscore, _t_detail = _score_bundle(
                     trules,
                     min_kpis=3,
-                    cohort_df=pool,
+                    cohort_df=base_cohort,
                     target_row=r,
                     use_tier_z=bool(use_tier_norm),
                 )
@@ -2168,7 +2076,7 @@ def render_search_by_position_panel(
             resp_vals = []
             for profile_key in resp_profile_map.get(rname, []):
                 if profile_key not in resp_cache:
-                    resp_pct, _resp_breakdown = _compute_responsibility_scores(pool, r, profile_key)
+                    resp_pct, _resp_breakdown = _compute_responsibility_scores(base_cohort, r, profile_key)
                     resp_cache[profile_key] = resp_pct or {}
                 v = resp_cache.get(profile_key, {}).get(rname, float("nan"))
                 if pd.notna(v):
@@ -2187,34 +2095,85 @@ def render_search_by_position_panel(
         extras = []
         for k, v in row_payload.items():
             if k.startswith("Trait ") or k.startswith("Resp "):
-                if isinstance(v, (int, float)) and not np.isnan(v):
-                    extras.append(float(v))
+                fv = _safe_float(v)
+                if np.isfinite(fv):
+                    extras.append(fv)
 
-        if extras:
-            row_payload["OverallAdj"] = float(np.mean([row_payload["RoleScore"]] + extras))
-        else:
-            row_payload["OverallAdj"] = row_payload["RoleScore"]
+        base_score = _safe_float(row_payload["RoleScore"])
+        score_parts = [base_score] if np.isfinite(base_score) else []
+        score_parts += extras
+        row_payload["OverallAdj"] = float(np.mean(score_parts)) if score_parts else float("nan")
 
         out_rows.append(row_payload)
 
     if not out_rows:
-        st.info("No players matched the selected role, trait and responsibility gates.")
+        st.info("No players matched the selected role, trait and responsibility filters.")
         return
 
     out = pd.DataFrame(out_rows)
-    out = out.sort_values(["OverallAdj", "RoleScore"], ascending=False).head(int(top_n))
+    out = out.sort_values(["OverallAdj", "RoleScore"], ascending=False).head(int(top_n)).reset_index(drop=True)
 
     st.markdown("#### Results")
+    mode_text = "role ranking" if selected_role_labels else "broad position ranking"
     st.caption(
-        "Position search includes secondary positions from the Wyscout Position cell. "
-        "Central midfield and attacking midfield families are side flexible. LW and RW stay side specific."
+        f"Current mode: {mode_text}. Position search includes secondary positions from the Wyscout Position cell."
     )
-    st.dataframe(out, use_container_width=True)
 
-################################################################################
-# -------- Reference players loader --------
-#-------------------------------------------------------------------------------
-@st.cache_data(show_spinner=False)
+    preferred_cols = [
+        "Player",
+        "Team",
+        "League",
+        "Position",
+        "Matched positions",
+        "Age",
+        "Minutes",
+        "Role",
+        "Best role",
+        "RoleScore",
+        "OverallAdj",
+        "TierCoef",
+    ]
+    score_cols = [c for c in out.columns if c.startswith("Score ") or c.startswith("Trait ") or c.startswith("Resp ")]
+    show_cols = [c for c in preferred_cols if c in out.columns] + score_cols
+
+    st.dataframe(
+        out[show_cols],
+        use_container_width=True,
+        hide_index=True,
+        column_config={
+            "RoleScore": st.column_config.NumberColumn("Role score", format="%.1f"),
+            "OverallAdj": st.column_config.NumberColumn("Overall score", format="%.1f"),
+            "TierCoef": st.column_config.NumberColumn("Tier coefficient", format="%.2f"),
+        },
+    )
+
+    if player_col and not out.empty:
+        st.markdown("#### Open profile")
+        open_options = []
+        open_rows = {}
+
+        for i, row in out.iterrows():
+            label = f"{i + 1}. {row.get('Player', '')} | {row.get('Team', '')} | {row.get('League', '')}"
+            open_options.append(label)
+            open_rows[label] = row
+
+        oc1, oc2 = st.columns([3, 1])
+        with oc1:
+            selected_open_label = st.selectbox(
+                "Select a result to open in Player profile",
+                [""] + open_options,
+                key=f"{key_prefix}_open_profile_pick",
+            )
+        with oc2:
+            st.write("")
+            st.write("")
+            if st.button("Open profile", key=f"{key_prefix}_open_profile_btn", disabled=not bool(selected_open_label)):
+                selected_row = open_rows.get(selected_open_label)
+                if selected_row is not None:
+                    st.session_state["goto_player_plain"] = str(selected_row.get("Player", ""))
+                    st.session_state["goto_team_plain"] = str(selected_row.get("Team", ""))
+                    st.session_state["da_jump_to"] = "search"
+                    st.rerun()
 
 
 def _safe_focus_suf() -> str:
@@ -2223,273 +2182,350 @@ def _safe_focus_suf() -> str:
 
 
 
-def _export_player_report_pdf(
+def _pdf_safe_text(value) -> str:
+    text = "" if value is None else str(value)
+    text = text.replace("\u2022", "/").replace("\u2013", "/").replace("\u2014", "/")
+    text = text.replace("\u2265", ">=").replace("\u2264", "<=")
+    text = text.replace("\xa0", " ")
+    return text
+
+
+def _pdf_fmt_num(value, decimals: int = 1) -> str:
+    try:
+        v = float(value)
+        if math.isnan(v):
+            return ""
+        return f"{v:.{decimals}f}"
+    except Exception:
+        return _pdf_safe_text(value)
+
+
+def _build_player_profile_dossier_pdf(
     *,
     sel_player: str,
     target_row: pd.Series,
     league_key: str,
     raw_pos: str,
+    sel_role: str | None,
+    sel_preset: str | None,
     minutes_text: str,
     minutes_share_text: str,
+    compare_mode: str | None,
     player_vals: dict[str, float],
     league_pcts: dict[str, float],
     secondary_pcts: dict[str, float],
     secondary_label: str | None,
+    phases: dict[str, list[str]] | None,
+    deductions: list[str] | None,
+    gap_payload: dict | None = None,
     sim_all: pd.DataFrame | None = None,
     sim_three: pd.DataFrame | None = None,
-) -> None:
+) -> bytes:
     """
-    Create an A4 PDF with:
-      • header and minutes
-      • radar chart of league percentiles
-      • full metric table with league and comparison percentiles
-      • similar players tables (overall + Belgium/Netherlands/France)
+    Build a downloadable scouting dossier PDF from the sections already shown in the Player Profile tab.
+    The PDF is generated in memory so it works on both Mac and Windows without hard coded local paths.
     """
 
-    out_dir = r"G:\My Drive\Reference Club\Databases\Scouting Workspace\Data Reports"
-    os.makedirs(out_dir, exist_ok=True)
-
-    safe_name = _re.sub(r"[^A-Za-z0-9_]+", "_", sel_player).strip("_") or "player"
-    file_path = os.path.join(out_dir, f"{safe_name}_data_profile.pdf")
-
-    c = canvas.Canvas(file_path, pagesize=A4)
-    width, height = A4
-    margin = 2 * cm
-    y = height - margin
-
-    # ---------------- Header ----------------
-    c.setFont("Helvetica-Bold", 16)
-    c.drawString(margin, y, sel_player)
-    y -= 18
-
-    c.setFont("Helvetica", 10)
-    tier_txt = ""
-    if "__tier" in target_row.index and pd.notna(target_row["__tier"]):
-        try:
-            tier_txt = f"T{int(target_row['__tier'])}"
-        except Exception:
-            tier_txt = str(target_row["__tier"])
-
-    header_line = (
-        f"{target_row.get('Team', '')} • {raw_pos} • {league_key} {tier_txt} • "
-        f"Age: {target_row.get('Age', '')}"
+    from reportlab.lib import colors
+    from reportlab.lib.enums import TA_LEFT
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+    from reportlab.lib.units import cm
+    from reportlab.platypus import (
+        SimpleDocTemplate,
+        Paragraph,
+        Spacer,
+        Table,
+        TableStyle,
+        PageBreak,
     )
-    c.drawString(margin, y, header_line)
-    y -= 14
 
-    # Minutes
-    c.drawString(margin, y, f"Minutes: {minutes_text}{minutes_share_text}")
-    y -= 20
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        rightMargin=1.4 * cm,
+        leftMargin=1.4 * cm,
+        topMargin=1.2 * cm,
+        bottomMargin=1.2 * cm,
+        title=f"{_pdf_safe_text(sel_player)} Scouting Dossier",
+    )
 
-    # ---------------- Radar chart ----------------
-    radar_metrics: list[str] = []
-    radar_vals: list[float] = []
+    styles = getSampleStyleSheet()
+    styles.add(
+        ParagraphStyle(
+            name="DossierTitle",
+            parent=styles["Title"],
+            fontName="Helvetica-Bold",
+            fontSize=18,
+            leading=22,
+            alignment=TA_LEFT,
+            textColor=colors.HexColor("#0f172a"),
+            spaceAfter=8,
+        )
+    )
+    styles.add(
+        ParagraphStyle(
+            name="DossierSection",
+            parent=styles["Heading2"],
+            fontName="Helvetica-Bold",
+            fontSize=12,
+            leading=15,
+            textColor=colors.HexColor("#0f172a"),
+            spaceBefore=12,
+            spaceAfter=6,
+        )
+    )
+    styles.add(
+        ParagraphStyle(
+            name="DossierBody",
+            parent=styles["BodyText"],
+            fontName="Helvetica",
+            fontSize=8.6,
+            leading=11,
+            textColor=colors.HexColor("#111827"),
+            spaceAfter=4,
+        )
+    )
+    styles.add(
+        ParagraphStyle(
+            name="DossierSmall",
+            parent=styles["BodyText"],
+            fontName="Helvetica",
+            fontSize=7.6,
+            leading=9.5,
+            textColor=colors.HexColor("#374151"),
+            spaceAfter=3,
+        )
+    )
 
-    for m in sorted(player_vals.keys()):
-        pct = league_pcts.get(m)
-        if pct is None:
-            continue
+    def P(value, style="DossierSmall"):
+        return Paragraph(_pdf_safe_text(value), styles[style])
+
+    def section(title: str):
+        story.append(P(title, "DossierSection"))
+
+    def table(data, widths=None, font_size=7.4, header=True):
+        clean = []
+        for row in data:
+            clean.append([P(cell, "DossierSmall") for cell in row])
+
+        t = Table(clean, colWidths=widths, repeatRows=1 if header else 0)
+        style_cmds = [
+            ("GRID", (0, 0), (-1, -1), 0.25, colors.HexColor("#cbd5e1")),
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ("LEFTPADDING", (0, 0), (-1, -1), 4),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+            ("TOPPADDING", (0, 0), (-1, -1), 3),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+            ("FONTSIZE", (0, 0), (-1, -1), font_size),
+        ]
+        if header:
+            style_cmds += [
+                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#e2e8f0")),
+                ("TEXTCOLOR", (0, 0), (-1, 0), colors.HexColor("#0f172a")),
+                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+            ]
+        t.setStyle(TableStyle(style_cmds))
+        story.append(t)
+        story.append(Spacer(1, 0.15 * cm))
+
+    def pct_text(value) -> str:
         try:
-            v = float(pct)
+            v = float(value)
+            if math.isnan(v):
+                return ""
+            return f"{v:.0f}"
+        except Exception:
+            return ""
+
+    def raw_text(value) -> str:
+        try:
+            v = float(value)
+            if math.isnan(v):
+                return ""
+            return f"{v:.2f}"
+        except Exception:
+            return _pdf_safe_text(value)
+
+    story: list = []
+
+    story.append(P("Scouting Dossier", "DossierTitle"))
+    story.append(P(_pdf_safe_text(sel_player), "DossierSection"))
+    story.append(
+        P(
+            "Generated from the Data Lab Player Profile using the currently selected cohort, role preset, metric focus, risk flags, phase metrics and similarity output.",
+            "DossierBody",
+        )
+    )
+
+    tier_txt = "T?"
+    if "__tier" in target_row.index and pd.notna(target_row.get("__tier")):
+        try:
+            tier_txt = f"T{int(target_row.get('__tier'))}"
+        except Exception:
+            tier_txt = _pdf_safe_text(target_row.get("__tier"))
+
+    overview_rows = [
+        ["Field", "Value", "Field", "Value"],
+        ["Player", sel_player, "Current club", target_row.get("Team", target_row.get("Club", ""))],
+        ["Position", raw_pos, "Selected comparison position", sel_role or ""],
+        ["League", league_key, "Tier", tier_txt],
+        ["Age", target_row.get("Age", ""), "Minutes", minutes_text],
+        ["Minutes share", minutes_share_text.replace(" • ", "").strip(), "Role preset", sel_preset or ""],
+        ["Secondary comparison", secondary_label or compare_mode or "", "Report type", "Data profile dossier"],
+    ]
+    table(overview_rows, widths=[3.0 * cm, 5.0 * cm, 3.6 * cm, 5.3 * cm])
+
+    section("Executive data summary")
+
+    valid_pcts = []
+    for metric, pct in (league_pcts or {}).items():
+        try:
+            p = float(pct)
+            if math.isnan(p):
+                continue
+            valid_pcts.append((metric, p, player_vals.get(metric, float("nan"))))
         except Exception:
             continue
-        if math.isnan(v):
-            continue
-        radar_metrics.append(m)
-        radar_vals.append(v)
 
-    if radar_metrics:
-        angles = np.linspace(0, 2 * np.pi, len(radar_metrics), endpoint=False)
-        vals = np.array(radar_vals, dtype=float)
+    strengths = sorted(valid_pcts, key=lambda x: x[1], reverse=True)[:6]
+    concerns = sorted(valid_pcts, key=lambda x: x[1])[:6]
 
-        # Close loop
-        angles = np.concatenate([angles, angles[:1]])
-        vals = np.concatenate([vals, vals[:1]])
-
-        fig = plt.figure(figsize=(5.5, 5.5))
-        ax = fig.add_subplot(111, polar=True)
-
-        ax.plot(angles, vals)
-        ax.fill(angles, vals, alpha=0.25)
-
-        ax.set_ylim(0, 100)
-        ax.set_yticks([0, 25, 50, 75, 100])
-        ax.set_yticklabels(["0", "25", "50", "75", "100"])
-
-        ax.set_xticks(np.linspace(0, 2 * np.pi, len(radar_metrics), endpoint=False))
-        ax.set_xticklabels(radar_metrics, fontsize=6)
-
-        ax.set_title("League percentiles radar", fontsize=10, pad=12)
-
-        buf = io.BytesIO()
-        fig.savefig(buf, format="png", dpi=260, bbox_inches="tight")
-        plt.close(fig)
-        buf.seek(0)
-
-        radar_img = ImageReader(buf)
-
-        img_width = 11 * cm
-        img_height = 11 * cm
-
-        c.drawImage(
-            radar_img,
-            margin,
-            y - img_height,
-            width=img_width,
-            height=img_height,
-            preserveAspectRatio=True,
-            mask="auto",
+    if strengths:
+        story.append(P("Strongest data indicators", "DossierBody"))
+        table(
+            [["Metric", "Player value", "League percentile"]]
+            + [[m, raw_text(v), pct_text(p)] for m, p, v in strengths],
+            widths=[9.0 * cm, 3.5 * cm, 3.5 * cm],
         )
 
-        y = y - img_height - 10  # move below radar
+    if concerns:
+        story.append(P("Lowest data indicators", "DossierBody"))
+        table(
+            [["Metric", "Player value", "League percentile"]]
+            + [[m, raw_text(v), pct_text(p)] for m, p, v in concerns],
+            widths=[9.0 * cm, 3.5 * cm, 3.5 * cm],
+        )
 
-    if y < margin + 40:
-        c.showPage()
-        y = height - margin
+    if deductions:
+        story.append(P("General deductions", "DossierBody"))
+        for item in deductions[:10]:
+            story.append(P(f"• {item}", "DossierSmall"))
 
-    # ---------------- Metric table ----------------
-    c.setFont("Helvetica-Bold", 10)
-    c.drawString(margin, y, "Metric")
-    c.drawString(margin + 8 * cm, y, "Value")
-    c.drawString(margin + 12 * cm, y, "League pct")
-    if secondary_label:
-        c.drawString(margin + 15.5 * cm, y, f"{secondary_label} pct")
-    y -= 12
+    if gap_payload:
+        section("Role fit and risk flags")
+        summary_rows = [
+            ["Item", "Value"],
+            ["Profile key", gap_payload.get("profile_key", "")],
+            ["Best role", gap_payload.get("best_role", "")],
+            ["Best role score", _pdf_fmt_num(gap_payload.get("best_role_score"))],
+            ["Best trait", gap_payload.get("best_trait", "")],
+            ["Best trait score", _pdf_fmt_num(gap_payload.get("best_trait_score"))],
+            ["Sample confidence", gap_payload.get("confidence", "")],
+            ["Major gaps", gap_payload.get("major_gaps", "")],
+        ]
+        table(summary_rows, widths=[5.0 * cm, 11.2 * cm])
 
-    c.setFont("Helvetica", 9)
+        weakness_summary = gap_payload.get("weakness_summary", "")
+        if weakness_summary:
+            story.append(P("Risk summary", "DossierBody"))
+            for line in str(weakness_summary).replace("**", "").split("\n"):
+                line = line.strip()
+                if line:
+                    story.append(P(line, "DossierSmall"))
 
-    for m in sorted(player_vals.keys()):
-        if y < margin + 25:
-            c.showPage()
-            y = height - margin
+        df_gaps = gap_payload.get("df_gaps")
+        if isinstance(df_gaps, pd.DataFrame) and not df_gaps.empty:
+            keep = [c for c in ["Area", "Profile", "Metric", "Player pct", "Threshold", "Gap", "Severity"] if c in df_gaps.columns]
+            if keep:
+                story.append(P("KPI gaps", "DossierBody"))
+                gap_rows = [["Area", "Profile", "Metric", "Player pct", "Threshold", "Gap", "Severity"]]
+                for _, row in df_gaps[keep].head(10).iterrows():
+                    gap_rows.append([row.get(c, "") for c in ["Area", "Profile", "Metric", "Player pct", "Threshold", "Gap", "Severity"]])
+                table(gap_rows, widths=[2.0 * cm, 3.0 * cm, 5.5 * cm, 1.8 * cm, 1.8 * cm, 1.4 * cm, 1.8 * cm])
 
-            c.setFont("Helvetica-Bold", 10)
-            c.drawString(margin, y, "Metric")
-            c.drawString(margin + 8 * cm, y, "Value")
-            c.drawString(margin + 12 * cm, y, "League pct")
-            if secondary_label:
-                c.drawString(margin + 15.5 * cm, y, f"{secondary_label} pct")
-            y -= 12
-            c.setFont("Helvetica", 9)
+        df_resp = gap_payload.get("df_resp")
+        if isinstance(df_resp, pd.DataFrame) and not df_resp.empty:
+            keep = [c for c in ["Responsibility", "Pct", "Gap vs floor"] if c in df_resp.columns]
+            if keep:
+                story.append(P("Responsibility concerns", "DossierBody"))
+                resp_rows = [["Responsibility", "Pct", "Gap vs floor"]]
+                for _, row in df_resp[keep].head(8).iterrows():
+                    resp_rows.append([row.get(c, "") for c in ["Responsibility", "Pct", "Gap vs floor"]])
+                table(resp_rows, widths=[8.5 * cm, 3.0 * cm, 3.5 * cm])
 
-        raw = player_vals.get(m)
-        lp = league_pcts.get(m)
-        sp = secondary_pcts.get(m) if secondary_label else None
+    section("Selected KPI profile")
+    metric_rows = [["Metric", "Player value", "League percentile", "Comparison percentile"]]
+    for metric, pct, raw_value in sorted(valid_pcts, key=lambda x: x[1], reverse=True):
+        metric_rows.append(
+            [
+                metric,
+                raw_text(raw_value),
+                pct_text(pct),
+                pct_text((secondary_pcts or {}).get(metric, float("nan"))),
+            ]
+        )
+    if len(metric_rows) > 1:
+        table(metric_rows[:32], widths=[8.0 * cm, 2.8 * cm, 2.8 * cm, 3.2 * cm])
+    else:
+        story.append(P("No selected KPI values were available for export.", "DossierSmall"))
 
-        c.drawString(margin, y, str(m))
+    if phases:
+        story.append(PageBreak())
+        section("Full metrics by phase")
+        for phase_name, metrics in phases.items():
+            phase_rows = [["Metric", "Player value", "League percentile", "Comparison percentile"]]
+            for metric in metrics:
+                if metric not in player_vals and metric not in league_pcts:
+                    continue
+                raw_value = player_vals.get(metric, float("nan"))
+                league_pct = league_pcts.get(metric, float("nan"))
+                secondary_pct = secondary_pcts.get(metric, float("nan"))
+                if pd.isna(pd.to_numeric(raw_value, errors="coerce")) and pd.isna(pd.to_numeric(league_pct, errors="coerce")):
+                    continue
+                phase_rows.append([metric, raw_text(raw_value), pct_text(league_pct), pct_text(secondary_pct)])
 
-        # Raw value
-        if raw is None or (isinstance(raw, float) and math.isnan(raw)):
-            raw_txt = "—"
-        else:
-            try:
-                raw_txt = f"{float(raw):.2f}"
-            except Exception:
-                raw_txt = str(raw)
-        c.drawRightString(margin + 10.5 * cm, y, raw_txt)
+            if len(phase_rows) > 1:
+                story.append(P(phase_name, "DossierBody"))
+                table(phase_rows, widths=[8.0 * cm, 2.8 * cm, 2.8 * cm, 3.2 * cm])
 
-        # League pct
-        if lp is None or (isinstance(lp, float) and math.isnan(lp)):
-            lp_txt = "—"
-        else:
-            try:
-                lp_txt = f"{float(lp):.1f}%"
-            except Exception:
-                lp_txt = str(lp)
-        c.drawRightString(margin + 14.2 * cm, y, lp_txt)
+    def similarity_rows(df: pd.DataFrame | None, title: str):
+        if df is None or not isinstance(df, pd.DataFrame) or df.empty:
+            return
 
-        # Comparison pct
-        if secondary_label:
-            if sp is None or (isinstance(sp, float) and math.isnan(sp)):
-                sp_txt = "—"
-            else:
-                try:
-                    sp_txt = f"{float(sp):.1f}%"
-                except Exception:
-                    sp_txt = str(sp)
-            c.drawRightString(margin + 18.0 * cm, y, sp_txt)
+        name_col = next((c for c in df.columns if str(c).lower() in {"player", "player name", "name"}), None)
+        team_col = next((c for c in df.columns if str(c).lower() in {"team", "club", "squad"}), None)
+        league_col = "__league_key" if "__league_key" in df.columns else next((c for c in df.columns if str(c).lower() in {"league", "competition"}), None)
+        sim_col = "RTR_Sim" if "RTR_Sim" in df.columns else ("Similarity" if "Similarity" in df.columns else None)
 
-        y -= 10
+        if not name_col or not sim_col:
+            return
 
-    # ---------------- Similar players sections ----------------
-    def _draw_sim_block(df: pd.DataFrame, title: str, y_pos: float) -> float:
-        """Write one similarity section and return new y."""
-        if df is None or df.empty:
-            return y_pos
-
-        nonlocal width, height, margin, c
-
-        c.showPage()
-        y_loc = height - margin
-        c.setFont("Helvetica-Bold", 12)
-        c.drawString(margin, y_loc, title)
-        y_loc -= 18
-
-        c.setFont("Helvetica-Bold", 10)
-        c.drawString(margin, y_loc, "Top 5 overall")
-        y_loc -= 14
-        c.setFont("Helvetica", 9)
-
-        df_sorted = df.sort_values("Similarity", ascending=False).copy()
-        top5 = df_sorted.head(5)
-
-        rank = 1
-        for _, r in top5.iterrows():
-            line = (
-                f"{rank}. {r.get('Player','')} "
-                f"({r.get('Team','')}, {r.get('Position','')}, "
-                f"Age {r.get('Age','')}, {r.get('__league_key','')}) "
-                f"Sim {float(r.get('Similarity',0)):.3f}"
+        story.append(P(title, "DossierBody"))
+        rows = [["Player", "Team", "League", "Similarity"]]
+        ordered = df.sort_values(sim_col, ascending=False).head(10)
+        for _, row in ordered.iterrows():
+            rows.append(
+                [
+                    row.get(name_col, ""),
+                    row.get(team_col, "") if team_col else "",
+                    row.get(league_col, "") if league_col else "",
+                    _pdf_fmt_num(row.get(sim_col), 3),
+                ]
             )
-            c.drawString(margin, y_loc, line[:150])
-            y_loc -= 11
-            rank += 1
+        table(rows, widths=[5.2 * cm, 4.4 * cm, 4.8 * cm, 2.2 * cm])
 
-        # U22 block
-        if "Age" in df_sorted.columns:
-            c.setFont("Helvetica-Bold", 10)
-            y_loc -= 6
-            c.drawString(margin, y_loc, "Top 3 U22")
-            y_loc -= 14
-            c.setFont("Helvetica", 9)
+    section("Similar player output")
+    similarity_rows(sim_all, "Closest statistical matches")
+    similarity_rows(sim_three, "Closest matches in Belgium, Netherlands and France")
 
-            u22 = df_sorted[
-                pd.to_numeric(df_sorted["Age"], errors="coerce") <= 22
-            ].copy()
-            top_u22 = u22.head(3)
+    story.append(Spacer(1, 0.3 * cm))
+    story.append(P("Scouting note: this dossier is a data profile. Final recruitment judgement still needs video evidence, tactical context, physical assessment, character context and target level evaluation.", "DossierBody"))
 
-            rank = 1
-            for _, r in top_u22.iterrows():
-                line = (
-                    f"{rank}. {r.get('Player','')} "
-                    f"({r.get('Team','')}, {r.get('Position','')}, "
-                    f"Age {r.get('Age','')}, {r.get('__league_key','')}) "
-                    f"Sim {float(r.get('Similarity',0)):.3f}"
-                )
-                c.drawString(margin, y_loc, line[:150])
-                y_loc -= 11
-                rank += 1
-
-        return y_loc
-
-    # Only render similarity sections if we actually have them
-    if sim_all is not None and not sim_all.empty:
-        y = _draw_sim_block(sim_all, "Similar players – overall database", y)
-
-    if sim_three is not None and not sim_three.empty:
-        y = _draw_sim_block(
-            sim_three,
-            "Similar players – Belgium / Netherlands / France",
-            y,
-        )
-
-    c.showPage()
-    c.save()
-
-
-
-
-@st.cache_data(show_spinner=False)
+    doc.build(story)
+    buffer.seek(0)
+    return buffer.getvalue()
 
 
 def parse_date_any(s: str) -> pd.Timestamp | pd.NaT:
@@ -7270,25 +7306,40 @@ def render_player_search_tab(
 
 
     # Export current profile to PDF
-    if st.button("Export this profile to PDF", key="export_player_pdf"):
-        try:
-            _export_player_report_pdf(
-                sel_player=sel_player,
-                target_row=target_row,
-                league_key=league_key,
-                raw_pos=raw_pos,
-                minutes_text=mins_text,
-                minutes_share_text=share_text,
-                player_vals=player_vals,
-                league_pcts=league_pcts,
-                secondary_pcts=secondary_pcts,
-                secondary_label=secondary_label,
-                sim_all=sim_all,
-                sim_three=sim_three,
-            )
-            st.success(
-                "Saved PDF to "
-                r"G:\My Drive\Reference Club\Databases\Scouting Workspace\Data Reports"
-            )
-        except Exception as e:
-            st.error(f"Failed to export PDF: {e}")
+    st.markdown("### Export scouting dossier")
+    st.caption(
+        "Exports the current Player Profile view as a structured scouting dossier with overview, role fit, risk flags, selected KPIs, phase metrics, deductions and similar players."
+    )
+
+    try:
+        dossier_pdf = _build_player_profile_dossier_pdf(
+            sel_player=sel_player,
+            target_row=target_row,
+            league_key=league_key,
+            raw_pos=raw_pos,
+            sel_role=sel_role,
+            sel_preset=sel_preset,
+            minutes_text=mins_text,
+            minutes_share_text=share_text,
+            compare_mode=compare_mode,
+            player_vals=player_vals,
+            league_pcts=league_pcts,
+            secondary_pcts=secondary_pcts,
+            secondary_label=secondary_label,
+            phases=phases,
+            deductions=deductions,
+            gap_payload=gap_payload,
+            sim_all=sim_all,
+            sim_three=sim_three,
+        )
+        safe_player = _re.sub(r"[^A-Za-z0-9_]+", "_", str(sel_player)).strip("_") or "player"
+        st.download_button(
+            "Export scouting dossier PDF",
+            data=dossier_pdf,
+            file_name=f"{safe_player}_scouting_dossier.pdf",
+            mime="application/pdf",
+            key="export_player_dossier_pdf",
+            use_container_width=True,
+        )
+    except Exception as e:
+        st.error(f"Failed to prepare scouting dossier export: {e}")
